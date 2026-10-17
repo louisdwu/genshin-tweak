@@ -1,1 +1,7 @@
+window_pause.log
 /window_pause.log
+__pycache__/
+logs/
+*.csv
+*.pyc
+.dsh-remote-meta.json

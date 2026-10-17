@@ -522,7 +522,7 @@ public class PauseToast {
         Show-Toast -Title "游戏已恢复 ▶" -Subtitle "${elapsed}Alt+~ 再次时停" -IsWarning $false -Duration 3500
     }
 
-    function Toggle-Pause {
+    function Switch-Pause {
         if ($script:IsPaused) {
             Invoke-Resume
         } else {
@@ -545,7 +545,7 @@ public class PauseToast {
 
     $miPause.Add_Click({  Invoke-Pause  })
     $miResume.Add_Click({ Invoke-Resume })
-    $miToggle.Add_Click({ Toggle-Pause  })
+    $miToggle.Add_Click({ Switch-Pause  })
     $miExit.Add_Click({
         Write-Log "Exit via menu"
         if ($script:IsPaused) { Invoke-Resume }
@@ -581,7 +581,7 @@ public class PauseToast {
     $script:HostForm.add_HotkeyFired({
         param($id)
         Write-Log "HotkeyFired: id=$id, IsPaused=$($script:IsPaused)"
-        if ($id -eq 1) { Toggle-Pause }
+        if ($id -eq 1) { Switch-Pause }
     })
 
     Write-Log "Entering Application::Run()..."
