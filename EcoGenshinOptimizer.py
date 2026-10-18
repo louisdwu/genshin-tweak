@@ -17,6 +17,15 @@ import time
 from datetime import datetime
 from collections import deque
 import psutil
+import json
+
+# 系统托盘与图标支持 (可选; 缺失时自动尝试安装, 仍失败则仅禁用托盘, 不影响档位显示)
+try:
+    from pystray import Icon as _TrayIcon, Menu as _TrayMenu, MenuItem as _TrayMenuItem
+    from PIL import Image as _PILImage, ImageDraw as _PILDraw, ImageFont as _PILFont
+    _TRAY_AVAILABLE = True
+except Exception:
+    _TRAY_AVAILABLE = False
 
 # Matplotlib 图表嵌入支持
 import matplotlib
@@ -68,6 +77,13 @@ class PowerSaverApp:
         self.root.minsize(760, 660)
         self.root.resizable(True, True)
 
+        # 窗口状态持久化: 记住上次窗口大小与最大化状态
+        self._win_config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "window_state.json")
+        self._load_window_state()
+
+        # 默认以最大化状态打开
+        self.root.after(0, lambda: self.root.state("zoomed"))
+
         self.current_cpu_throttle = 100
         self.last_idle, self.last_kernel, self.last_user = get_system_times()
         self.current_gpu_watts = 0.0
@@ -83,6 +99,20 @@ class PowerSaverApp:
 
         # 退出时是否恢复硬件全速
         self.restore_on_exit = tk.BooleanVar(value=True)
+
+        # 当前档位状态: 'video' | 'work' | 'game' | 'custom' | 'none'
+        self.current_mode = "none"
+        self.current_mode_var = tk.StringVar(value="未设置档位")
+        # 档位 -> (显示名, 主色, 托盘图标RGB, 图标字母)
+        self.MODE_TABLE = {
+            "video":  ("🎬 极致省电看视频", "#2e7d32", (46, 125, 50),  "E"),
+            "work":   ("💻 多网页/IDE办公",  "#0277bd", (2, 119, 189),  "W"),
+            "game":   ("🔥 火力全开玩游戏",  "#c62828", (198, 40, 40),  "G"),
+            "custom": ("⚙ 自定义参数",      "#6a1b9a", (106, 27, 154), "C"),
+            "none":   ("未设置档位",        "#555555", (96, 96, 96),   "·"),
+        }
+        self.tray_icon = None
+        self.tray_enabled = False
 
         # 细致 CSV 数据记录配置
         self.log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
@@ -127,6 +157,9 @@ class PowerSaverApp:
         # 启动定时刷新图表 (UI 主线程中更新以保稳定)
         self.root.after(1500, self.refresh_chart_loop)
 
+        # 初始化系统托盘 (缺失依赖则自动尝试安装, 仍失败则静默禁用, 档位横幅不受影响)
+        self.init_tray()
+
     def init_csv_file(self):
         if not os.path.exists(self.csv_file_path):
             try:
@@ -151,15 +184,66 @@ class PowerSaverApp:
         except Exception:
             pass
 
+    def _load_window_state(self):
+        """从配置文件恢复上次的窗口大小与最大化状态"""
+        try:
+            if os.path.exists(self._win_config_file):
+                with open(self._win_config_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if data.get("geometry"):
+                    self.root.geometry(data["geometry"])
+                if data.get("state") == "zoomed":
+                    # 延迟到事件循环中设置最大化, 确保窗口已完成初始映射
+                    self.root.after(150, lambda: self.root.state("zoomed"))
+        except Exception:
+            pass
+
+    def _save_window_state(self):
+        """保存当前窗口大小与最大化状态到配置文件"""
+        try:
+            state = self.root.winfo_state()
+            # 窗口最小化到托盘时状态为 withdrawn, 恢复时按 normal 处理
+            if state == "withdrawn":
+                state = "normal"
+            data = {
+                "geometry": self.root.geometry(),
+                "state": state
+            }
+            with open(self._win_config_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
     def on_close(self):
+        # 点击窗口叉号 -> 最小化到托盘 (若托盘可用); 否则直接退出
+        if self.tray_enabled and self.tray_icon is not None:
+            try:
+                self.root.withdraw()
+                self.log("🖥 已最小化到系统托盘; 右键托盘图标可切换档位/显示窗口/退出")
+            except Exception:
+                self._real_quit()
+        else:
+            self._real_quit()
+
+    def _real_quit(self):
+        """真正退出: 停止托盘、按需恢复硬件、销毁窗口"""
         self.is_monitoring = False
+        self._save_window_state()
         if self.restore_on_exit.get():
             try:
                 self.reset_gpu_limit()
                 self.apply_cpu_limit(100)
             except Exception:
                 pass
-        self.root.destroy()
+        try:
+            if self.tray_icon is not None:
+                self.tray_icon.stop()
+        except Exception:
+            pass
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
 
     def safe_exit_cleanup(self):
         if hasattr(self, 'restore_on_exit') and self.restore_on_exit.get():
@@ -171,7 +255,147 @@ class PowerSaverApp:
             except Exception:
                 pass
 
+    # ---------- 档位显示与系统托盘 ----------
+    def set_current_mode(self, key):
+        """统一更新顶部档位横幅与托盘图标/提示"""
+        if key not in self.MODE_TABLE:
+            key = "none"
+        self.current_mode = key
+        label, color, _rgb, _letter = self.MODE_TABLE[key]
+        self.current_mode_var.set(label)
+        try:
+            self.mode_banner.config(bg=color)
+        except Exception:
+            pass
+        if self.tray_icon is not None:
+            try:
+                self.tray_icon.icon = self.make_tray_icon(key)
+                self.tray_icon.title = f"BetterGI省电工具 | 当前: {label}"
+                self.tray_icon.update_menu()
+            except Exception:
+                pass
+
+    def make_tray_icon(self, key):
+        """根据档位生成托盘图标 (带颜色圆角底与字母标识)"""
+        _label, _color, rgb, letter = self.MODE_TABLE.get(key, self.MODE_TABLE["none"])
+        img = _PILImage.new("RGBA", (64, 64), (0, 0, 0, 0))
+        d = _PILDraw.Draw(img)
+        try:
+            d.rounded_rectangle([6, 6, 58, 58], radius=14, fill=rgb + (255,))
+        except Exception:
+            d.rectangle([6, 6, 58, 58], fill=rgb + (255,))
+        font = None
+        for fname in ("msyh.ttc", "msyhbd.ttc", "simhei.ttf", "segoeui.ttf", "arial.ttf"):
+            try:
+                font = _PILFont.truetype(fname, 40)
+                break
+            except Exception:
+                continue
+        if font is None:
+            font = _PILFont.load_default()
+        try:
+            bbox = d.textbbox((0, 0), letter, font=font)
+            tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            d.text((32 - tw / 2, 32 - th / 2 - bbox[1]), letter, fill="white", font=font)
+        except Exception:
+            d.text((22, 16), letter, fill="white", font=font)
+        return img
+
+    def init_tray(self):
+        """创建系统托盘; 依赖缺失时自动尝试安装, 仍失败则禁用托盘 (档位横幅不受影响)"""
+        global _TRAY_AVAILABLE
+        if not _TRAY_AVAILABLE:
+            # 后台安装托盘依赖, 不阻塞主窗口启动; 装好后回主线程创建托盘
+            self.log("🛠 后台安装托盘依赖 pystray + Pillow 中, 窗口可正常使用...")
+            threading.Thread(target=self._install_tray_deps, daemon=True).start()
+            return
+        self._build_tray()
+
+    def _install_tray_deps(self):
+        """后台线程: 安装 pystray/Pillow 并绑定全局名, 成功后回主线程建托盘"""
+        global _TRAY_AVAILABLE, _TrayIcon, _TrayMenu, _TrayMenuItem, _PILImage, _PILDraw, _PILFont
+        try:
+            import subprocess as _sp, sys as _sys
+            _sp.run([_sys.executable, "-m", "pip", "install", "pystray", "Pillow"],
+                    check=False, creationflags=0x08000000)
+            from pystray import Icon as _TrayIcon2, Menu as _TrayMenu2, MenuItem as _TrayMenuItem2
+            from PIL import Image as _PILImage2, ImageDraw as _PILDraw2, ImageFont as _PILFont2
+            _TrayIcon = _TrayIcon2
+            _TrayMenu = _TrayMenu2
+            _TrayMenuItem = _TrayMenuItem2
+            _PILImage = _PILImage2
+            _PILDraw = _PILDraw2
+            _PILFont = _PILFont2
+            _TRAY_AVAILABLE = True
+            self.root.after(0, self._build_tray)
+        except Exception as e:
+            msg = f"⚠ 托盘依赖安装失败, 仅启用档位显示: {e}"
+            self.root.after(0, lambda m=msg: self.log(m))
+
+    def _build_tray(self):
+        """创建系统托盘图标与菜单 (主线程调用)"""
+        global _TRAY_AVAILABLE
+        if not _TRAY_AVAILABLE:
+            return
+        try:
+            IconCls = _TrayIcon
+            MenuCls = _TrayMenu
+            ItemCls = _TrayMenuItem
+
+            def _show(icon=None, item=None):
+                self.root.after(0, self._tray_restore)
+
+            def _quit(icon=None, item=None):
+                self.root.after(0, self._real_quit)
+
+            def _preset(key):
+                def _cb(icon=None, item=None):
+                    self.root.after(0, lambda k=key: self._tray_apply_preset(k))
+                return _cb
+
+            menu = MenuCls(
+                ItemCls("显示主窗口", _show, default=True),
+                ItemCls("极致省电看视频", _preset("video")),
+                ItemCls("多网页/IDE办公", _preset("work")),
+                ItemCls("火力全开玩游戏", _preset("game")),
+                ItemCls("退出 (恢复全速)", _quit),
+            )
+            self.tray_icon = IconCls("EcoGenshinTray", self.make_tray_icon(self.current_mode),
+                                     "BetterGI省电工具", menu)
+            threading.Thread(target=self.tray_icon.run, daemon=True).start()
+            self.tray_enabled = True
+            self.set_current_mode(self.current_mode)
+            self.log("🖥 系统托盘已就绪: 叉号即最小化, 右键托盘图标可切档位/退出")
+        except Exception as e:
+            self.log(f"⚠ 系统托盘初始化失败: {e}")
+            self.tray_enabled = False
+
+    def _tray_restore(self):
+        try:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+        except Exception:
+            pass
+
+    def _tray_apply_preset(self, key):
+        try:
+            {"video": self.apply_video_preset,
+             "work": self.apply_work_preset,
+             "game": self.apply_game_preset}[key]()
+        except Exception as e:
+            self.log(f"托盘切换档位失败: {e}")
+
     def create_widgets(self):
+        # 0. 顶部当前档位醒目横幅 (随档位变色, 一眼可知当前处于哪一档)
+        self.mode_banner = tk.Label(
+            self.root, textvariable=self.current_mode_var,
+            bg=self.MODE_TABLE[self.current_mode][1], fg="white",
+            font=("Microsoft YaHei", 18, "bold"), height=2, relief="flat"
+        )
+        self.mode_banner.pack(fill="x", padx=10, pady=(6, 2))
+        self.mode_banner.bind("<Button-1>", lambda e: self.log("当前档位: " + self.current_mode_var.get()))
+
         # 1. 监控面板 (字号配合 scaling 呈现出大字效果)
         mon_frame = ttk.LabelFrame(self.root, text="实时状态与全维度监控 (CPU/GPU/内存/最高能耗进程)", padding=(10, 4))
         mon_frame.pack(fill="x", padx=10, pady=3)
@@ -502,6 +726,7 @@ class PowerSaverApp:
         self.apply_gpu_limit(300, 100)
         self.apply_cpu_limit(20)
         self.record_switch_event("[极致省电看视频]", "全部拉至硬件最低 | GPU 300MHz, 100W | CPU 20% (800MHz)")
+        self.set_current_mode("video")
         self.log("🎬 已应用极致省电模式: GPU 300MHz(极限), 功耗100W, CPU 20%(800MHz触底)")
 
     def apply_work_preset(self):
@@ -516,6 +741,7 @@ class PowerSaverApp:
         self.apply_gpu_limit(600, 120)
         self.apply_cpu_limit(65)
         self.record_switch_event("[多网页/IDE办公]", "流畅办公省电 | GPU 600MHz, 120W | CPU 65% (~2.0GHz)")
+        self.set_current_mode("work")
         self.log("💻 已应用办公编程模式: GPU 600MHz, CPU ~2.0GHz (切网页/写代码丝滑不卡)")
 
     def apply_game_preset(self):
@@ -530,6 +756,7 @@ class PowerSaverApp:
         self.reset_gpu_limit()
         self.apply_cpu_limit(100)
         self.record_switch_event("[火力全开玩游戏]", "满血全开 | GPU 解锁/250W+ | CPU 100% 满血睿频")
+        self.set_current_mode("game")
         self.log("🔥 已应用游戏火力全开模式: 完全解除锁频与功耗墙，CPU 100% 睿频满载")
 
     def apply_custom(self):
@@ -539,6 +766,7 @@ class PowerSaverApp:
         self.apply_gpu_limit(clk, pl)
         self.apply_cpu_limit(cpu_p)
         self.record_switch_event("[自定义配置]", f"GPU {clk}MHz, {pl}W | CPU {cpu_p}%")
+        self.set_current_mode("custom")
         self.log(f"✅ 自定义配置已应用: GPU {clk}MHz, CPU {cpu_p}%")
 
     def get_cpu_load(self):
