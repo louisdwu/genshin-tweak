@@ -36,6 +36,7 @@ echo [1/2] Compiling src\genshin-tweak.cs ...
     /resource:src\tray_video.ico,tray_video.ico ^
     /resource:src\tray_work.ico,tray_work.ico ^
     /resource:src\tray_game.ico,tray_game.ico ^
+    /resource:src\tray_custom.ico,tray_custom.ico ^
     /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
     src\genshin-tweak.cs
 if errorlevel 1 (

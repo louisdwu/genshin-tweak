@@ -604,7 +604,17 @@ namespace GenshinTweak
         private Icon _appIcon;
         private Dictionary<string, Icon> _modeIcons;
         private string _modeName = "默认";
+        private string _modeKey = "default";
         private bool _iconFallback;
+        private bool _syncing;
+
+        private Button _btnVideo, _btnWork, _btnGame, _btnCustom;
+        private ToolStripMenuItem _miVideo, _miWork, _miGame, _miCustom, _miDefault;
+
+        private static readonly Color ModeGreen  = Color.FromArgb(166, 227, 161);
+        private static readonly Color ModeBlue   = Color.FromArgb(137, 180, 250);
+        private static readonly Color ModeOrange = Color.FromArgb(250, 179, 135);
+        private static readonly Color ModeWhite  = Color.FromArgb(245, 246, 255);
 
         public MainForm()
         {
@@ -626,6 +636,8 @@ namespace GenshinTweak
                 ClientSize = new Size((int)(620 * f), (int)(560 * f));
                 MinimumSize = new Size((int)(560 * f), (int)(500 * f));
             }
+
+            LoadWindowStatePrefs();
 
             BuildUi();
             LoadModeIcons();
@@ -699,26 +711,24 @@ namespace GenshinTweak
 
         private void BuildPresetGroup()
         {
-            GroupBox g = NewGroup("一键场景预设");
+            GroupBox g = NewGroup("一键模式预设 — 当前选择高亮");
             FlowLayoutPanel flow = new FlowLayoutPanel();
             flow.Dock = DockStyle.Fill;
             flow.AutoSize = true;
-            flow.WrapContents = false;
             g.Controls.Add(flow);
 
-            string[] names = { "🎬 极致省电看视频", "💻 多网页/IDE 办公", "🔥 火力全开玩游戏" };
-            EventHandler[] handlers =
-            {
-                delegate { ApplyVideoPreset(); },
-                delegate { ApplyWorkPreset(); },
-                delegate { ApplyGamePreset(); }
-            };
-            for (int i = 0; i < 3; i++)
-            {
-                Button b = NewButton(names[i], handlers[i]);
-                b.MinimumSize = new Size(150, 34);
-                flow.Controls.Add(b);
-            }
+            _btnVideo  = NewButton("🎬 极致省电看视频", delegate { ApplyVideoPreset(); });
+            _btnWork   = NewButton("💻 多网页/IDE 办公", delegate { ApplyWorkPreset(); });
+            _btnGame   = NewButton("🔥 火力全开玩游戏", delegate { ApplyGamePreset(); });
+            _btnCustom = NewButton("⚪ 自定义", delegate { MarkCustom(); });
+            _btnVideo.MinimumSize  = new Size(150, 34);
+            _btnWork.MinimumSize   = new Size(150, 34);
+            _btnGame.MinimumSize   = new Size(150, 34);
+            _btnCustom.MinimumSize = new Size(110, 34);
+            flow.Controls.Add(_btnVideo);
+            flow.Controls.Add(_btnWork);
+            flow.Controls.Add(_btnGame);
+            flow.Controls.Add(_btnCustom);
 
             _cpuLabel = new Label();
             _cpuLabel.Text = "CPU: --%";
@@ -841,7 +851,11 @@ namespace GenshinTweak
 
             // CS1628: out params cannot be captured by anonymous methods
             Label val = valueLabel;
-            tb.ValueChanged += delegate { val.Text = tb.Value.ToString(); };
+            tb.ValueChanged += delegate
+            {
+                val.Text = tb.Value.ToString();
+                if (!_syncing) MarkCustom();
+            };
             return tb;
         }
 
@@ -849,20 +863,33 @@ namespace GenshinTweak
         {
             _tray = new NotifyIcon();
             _tray.Icon = _appIcon;
-            _tray.Text = "Genshin Tweak | ▶ 运行中";
+            _tray.Text = "Genshin Tweak";
             _tray.Visible = true;
             _tray.DoubleClick += delegate { ShowWindow(); };
 
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Items.Add("时停切换 (Alt+`)", null, delegate { PauseController.Toggle(); });
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("🎬 极致省电看视频", null, delegate { ApplyVideoPreset(); });
-            menu.Items.Add("💻 多网页/IDE 办公", null, delegate { ApplyWorkPreset(); });
-            menu.Items.Add("🔥 火力全开玩游戏", null, delegate { ApplyGamePreset(); });
+
+            _miVideo  = new ToolStripMenuItem("🎬 极致省电看视频");
+            _miVideo.Click += delegate { ApplyVideoPreset(); };
+            _miWork   = new ToolStripMenuItem("💻 多网页/IDE 办公");
+            _miWork.Click += delegate { ApplyWorkPreset(); };
+            _miGame   = new ToolStripMenuItem("🔥 火力全开玩游戏");
+            _miGame.Click += delegate { ApplyGamePreset(); };
+            _miCustom = new ToolStripMenuItem("⚪ 自定义 (打开主窗口微调)");
+            _miCustom.Click += delegate { MarkCustom(); ShowWindow(); };
+            _miDefault= new ToolStripMenuItem("↺ 默认 (全解锁)");
+            _miDefault.Click += delegate { ResetDefaults(); };
+            menu.Items.AddRange(new ToolStripItem[]
+            {
+                _miVideo, _miWork, _miGame, _miCustom, _miDefault
+            });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("显示主窗口", null, delegate { ShowWindow(); });
             menu.Items.Add("退出并恢复硬件", null, delegate { RealExit(); });
             _tray.ContextMenuStrip = menu;
+            UpdateTrayChecks(_modeKey);
         }
 
         // ====================================================================
@@ -912,7 +939,7 @@ namespace GenshinTweak
                 string.Format(" 自定义: GPU {0}MHz / {1}W, CPU {2}%", clk, watt, cpuPct));
             PowerControl.LogEvent("custom",
                 string.Format("gpu={0}MHz,{1}W cpu={2}%", clk, watt, cpuPct));
-            SetTrayMode("default", "自定义");
+            SetTrayMode("custom", "⚪ 自定义");
         }
 
         private void ResetDefaults()
@@ -927,9 +954,11 @@ namespace GenshinTweak
 
         private void SyncSliders(int clk, int watt, int cpu)
         {
+            _syncing = true;
             _gpuClock.Value = Clamp(_gpuClock, clk);
             _gpuWatt.Value = Clamp(_gpuWatt, watt);
             _cpuMax.Value = Clamp(_cpuMax, cpu);
+            _syncing = false;
         }
 
         private static int Clamp(TrackBar tb, int v)
@@ -998,7 +1027,7 @@ namespace GenshinTweak
         private void LoadModeIcons()
         {
             _modeIcons = new Dictionary<string, Icon>();
-            string[] keys = { "default", "video", "work", "game" };
+            string[] keys = { "default", "video", "work", "game", "custom" };
             foreach (string key in keys)
             {
                 try
@@ -1015,13 +1044,116 @@ namespace GenshinTweak
 
         private void SetTrayMode(string key, string label)
         {
+            _modeKey = key;
             _modeName = label;
             Icon mi;
             if (_modeIcons != null && _modeIcons.TryGetValue(key, out mi) && mi != null)
                 _tray.Icon = mi;
             else
                 _tray.Icon = (_appIcon != null) ? _appIcon : SystemIcons.Application;
+            HighlightPreset(key);
+            UpdateTrayChecks(key);
             UpdatePauseUi();
+        }
+
+        private void HighlightPreset(string key)
+        {
+            SetBtnMode(_btnVideo,  key == "video",  ModeGreen);
+            SetBtnMode(_btnWork,   key == "work",   ModeBlue);
+            SetBtnMode(_btnGame,   key == "game",   ModeOrange);
+            SetBtnMode(_btnCustom, key == "custom", ModeWhite);
+        }
+
+        private static void SetBtnMode(Button b, bool on, Color c)
+        {
+            if (b == null) return;
+            b.BackColor = on ? c : SystemColors.Control;
+            b.ForeColor = on ? Color.FromArgb(24, 24, 32) : SystemColors.ControlText;
+        }
+
+        private void UpdateTrayChecks(string key)
+        {
+            if (_miVideo   != null) _miVideo.Checked   = (key == "video");
+            if (_miWork    != null) _miWork.Checked    = (key == "work");
+            if (_miGame    != null) _miGame.Checked    = (key == "game");
+            if (_miCustom  != null) _miCustom.Checked  = (key == "custom");
+            if (_miDefault != null) _miDefault.Checked = (key == "default");
+        }
+
+        // user tweaked sliders after picking a mode -> becomes "custom"
+        private void MarkCustom()
+        {
+            if (_modeKey == "custom") return;
+            SetTrayMode("custom", "⚪ 自定义");
+            PowerControl.LogEvent("custom-state", "manual tweak");
+        }
+
+        // ---- window state persistence (default: maximized) ----
+        private static string SettingsPath()
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "GenshinTweak", "ui.ini");
+        }
+
+        private void LoadWindowStatePrefs()
+        {
+            try
+            {
+                string path = SettingsPath();
+                if (!File.Exists(path)) return;          // no file -> default maximized
+                string state = "max";
+                int x = 0, y = 0, w = 0, h = 0;
+                foreach (string ln in File.ReadAllLines(path))
+                {
+                    int i = ln.IndexOf('=');
+                    if (i <= 0) continue;
+                    string k = ln.Substring(0, i).Trim();
+                    string v = ln.Substring(i + 1).Trim();
+                    if (k == "state") state = v;
+                    else if (k == "x") int.TryParse(v, out x);
+                    else if (k == "y") int.TryParse(v, out y);
+                    else if (k == "w") int.TryParse(v, out w);
+                    else if (k == "h") int.TryParse(v, out h);
+                }
+                if (state == "normal" && w > 200 && h > 200)
+                {
+                    Rectangle vs = SystemInformation.VirtualScreen;
+                    if (x < vs.Left - 40 || x > vs.Right - 80) x = vs.Left + 40;
+                    if (y < vs.Top) y = vs.Top;
+                    StartPosition = FormStartPosition.Manual;
+                    Bounds = new Rectangle(x, y, w, h);
+                    WindowState = FormWindowState.Normal;
+                }
+            }
+            catch { }
+        }
+
+        private void SaveWindowState()
+        {
+            try
+            {
+                if (WindowState == FormWindowState.Minimized) return;
+                string path = SettingsPath();
+                string dir = Path.GetDirectoryName(path);
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                File.WriteAllText(path, string.Format(
+                    "state={0}\r\nx={1}\r\ny={2}\r\nw={3}\r\nh={4}\r\n",
+                    (WindowState == FormWindowState.Maximized) ? "max" : "normal",
+                    Location.X, Location.Y, Width, Height));
+            }
+            catch { }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            SaveWindowState();
+        }
+
+        protected override void OnResizeEnd(EventArgs e)
+        {
+            base.OnResizeEnd(e);
+            SaveWindowState();
         }
 
         private void ShowWindow()
@@ -1067,6 +1199,7 @@ namespace GenshinTweak
         // X button hides to tray (real exit only from tray menu)
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            SaveWindowState();
             if (e.CloseReason == CloseReason.UserClosing && !_reallyExiting)
             {
                 e.Cancel = true;
