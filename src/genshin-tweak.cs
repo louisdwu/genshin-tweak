@@ -7,6 +7,8 @@
 //   3. Global hotkey Alt+`             (toggle pause anytime)
 //   4. System tray                     (presets / show / exit with HW restore)
 //   5. CSV event log                   (genshin_tweak_log.csv next to exe)
+//   6. Foreground-app volume + mute    (WASAPI, hotkeys Pause / Ctrl+Alt+Up/Down)
+//      — merged from the "Volume Controller" project, now native C#
 //
 // Build (on Windows, zero install):
 //   build.bat   ->  uses %WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe
@@ -471,17 +473,22 @@ namespace GenshinTweak
         }
 
         // ---- CSV event log ----------------------------------------------------
+        private static readonly object CsvLock = new object();
+
         public static void LogEvent(string mode, string detail)
         {
             try
             {
-                if (!File.Exists(CsvPath))
+                lock (CsvLock)
                 {
-                    File.AppendAllText(CsvPath, "time,mode,detail\r\n", new UTF8Encoding(false));
+                    if (!File.Exists(CsvPath))
+                    {
+                        File.AppendAllText(CsvPath, "time,mode,detail\r\n", new UTF8Encoding(false));
+                    }
+                    string line = string.Format("{0:yyyy-MM-dd HH:mm:ss},{1},{2}\r\n",
+                        DateTime.Now, mode, detail.Replace(",", "，"));
+                    File.AppendAllText(CsvPath, line, new UTF8Encoding(false));
                 }
-                string line = string.Format("{0:yyyy-MM-dd HH:mm:ss},{1},{2}\r\n",
-                    DateTime.Now, mode, detail.Replace(",", "，"));
-                File.AppendAllText(CsvPath, line, new UTF8Encoding(false));
             }
             catch { /* logging must never crash the app */ }
         }
@@ -660,6 +667,24 @@ namespace GenshinTweak
         private Button _btnVideo, _btnWork, _btnGame, _btnCustom;
         private ToolStripMenuItem _miVideo, _miWork, _miGame, _miCustom, _miDefault;
 
+        // ---- foreground volume (merged Volume Controller) ----
+        private CheckBox _volEnabled;
+        private NumericUpDown _volStep;
+        private TextBox _volMuteKey, _volUpKey, _volDownKey;
+        private Label _volStatus;
+        private Timer _volTimer;
+        private Timer _volCaptureTimeout;
+        private volatile int _volStepPct = 2;
+        private bool _volSyncing;
+        private bool _savedVolEnabled = true;
+        private int _savedVolStep = 2;
+        private string _savedVolMute, _savedVolUp, _savedVolDown;
+
+        private const string DefaultVolumeMuteKey = "Pause";
+        private const string DefaultVolumeUpKey = "Ctrl+Alt+Up";
+        private const string DefaultVolumeDownKey = "Ctrl+Alt+Down";
+        private static readonly Color CaptureColor = Color.FromArgb(255, 244, 190);
+
         private static readonly Color ModeGreen  = Color.FromArgb(166, 227, 161);
         private static readonly Color ModeBlue   = Color.FromArgb(137, 180, 250);
         private static readonly Color ModeOrange = Color.FromArgb(250, 179, 135);
@@ -682,8 +707,8 @@ namespace GenshinTweak
             using (Graphics g = CreateGraphics())
             {
                 float f = g.DpiX / 96f;
-                ClientSize = new Size((int)(620 * f), (int)(560 * f));
-                MinimumSize = new Size((int)(560 * f), (int)(500 * f));
+                ClientSize = new Size((int)(620 * f), (int)(720 * f));
+                MinimumSize = new Size((int)(560 * f), (int)(640 * f));
             }
 
             LoadWindowStatePrefs();
@@ -727,9 +752,25 @@ namespace GenshinTweak
             _cpuTimer.Tick += CpuTimerTick;
             _cpuTimer.Start();
 
+            // ---- foreground-app volume hotkeys (merged Volume Controller) ----
+            VolumeHud.Attach(this);
+            VolumeKeys.Attach(this);
+            VolumeKeys.Step = VolumeStep;
+            VolumeKeys.Mute = VolumeMute;
+            if (!VolumeKeys.Install())
+                AppendLog("[WARN] 全局键盘钩子安装失败，音量热键与热键修改不可用（其余功能不受影响）");
+            ApplyVolumeSettings(false);
+            UpdateVolumeLabel(CoreAudio.QueryForeground());
+
+            _volTimer = new Timer();
+            _volTimer.Interval = 2000;
+            _volTimer.Tick += VolTimerTick;
+            _volTimer.Start();
+
             RestoreProfilePrefs();
             PowerControl.LogEvent("start", "app launched");
-            AppendLog("[OK] 启动完成。先选预设或拖动滑条，再进游戏按 Alt+` 时停。");
+            AppendLog("[OK] 启动完成。先选预设或拖动滑条，再进游戏按 Alt+` 时停；"
+                + "前台应用音量用 Pause 静音、Ctrl+Alt+↑/↓ 调节。");
             UpdatePauseUi();
         }
 
@@ -763,8 +804,9 @@ namespace GenshinTweak
             _root.Dock = DockStyle.Fill;
             _root.Padding = new Padding(6);
             _root.ColumnCount = 1;
-            _root.RowCount = 4;
+            _root.RowCount = 5;
             _root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -774,6 +816,7 @@ namespace GenshinTweak
             BuildPresetGroup();
             BuildCustomGroup();
             BuildPauseGroup();
+            BuildVolumeGroup();
             BuildLogGroup();
         }
 
@@ -874,6 +917,315 @@ namespace GenshinTweak
             _root.Controls.Add(g, 0, 2);
         }
 
+        // ====================================================================
+        // foreground application volume (merged from Volume Controller)
+        // ====================================================================
+        private void BuildVolumeGroup()
+        {
+            GroupBox g = NewGroup("前台应用音量 — 独立控制焦点窗口，不影响系统音量");
+
+            TableLayoutPanel t = new TableLayoutPanel();
+            t.Dock = DockStyle.Fill;
+            t.AutoSize = true;
+            t.ColumnCount = 1;
+            t.RowCount = 3;
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            for (int i = 0; i < 3; i++) t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            _volStatus = new Label();
+            _volStatus.Text = "前台: --";
+            _volStatus.ForeColor = Color.Gray;
+            _volStatus.AutoSize = true;
+            _volStatus.Margin = new Padding(2, 2, 2, 4);
+            t.Controls.Add(_volStatus, 0, 0);
+
+            FlowLayoutPanel flow = new FlowLayoutPanel();
+            flow.Dock = DockStyle.Fill;
+            flow.AutoSize = true;
+            flow.WrapContents = true;
+
+            _volEnabled = new CheckBox();
+            _volEnabled.Text = "启用全局热键";
+            _volEnabled.AutoSize = true;
+            _volEnabled.Checked = _savedVolEnabled;
+            _volEnabled.Margin = new Padding(2, 8, 14, 2);
+            flow.Controls.Add(_volEnabled);
+
+            Label stepCap = new Label();
+            stepCap.Text = "步进 %";
+            stepCap.AutoSize = true;
+            stepCap.Margin = new Padding(0, 11, 4, 2);
+            flow.Controls.Add(stepCap);
+
+            _volStep = new NumericUpDown();
+            _volStep.Minimum = 1;
+            _volStep.Maximum = 50;
+            _volStep.Value = Math.Max(1, Math.Min(50, _savedVolStep));
+            _volStep.Width = 52;
+            _volStep.Margin = new Padding(0, 7, 14, 2);
+            flow.Controls.Add(_volStep);
+
+            _volMuteKey = NewHotkeyBox(_savedVolMute == null ? DefaultVolumeMuteKey : _savedVolMute);
+            _volUpKey = NewHotkeyBox(_savedVolUp == null ? DefaultVolumeUpKey : _savedVolUp);
+            _volDownKey = NewHotkeyBox(_savedVolDown == null ? DefaultVolumeDownKey : _savedVolDown);
+
+            AddHotkeyField(flow, "静音", _volMuteKey);
+            AddHotkeyField(flow, "音量-", _volDownKey);
+            AddHotkeyField(flow, "音量+", _volUpKey);
+
+            Button btnDown = NewButton("🔉 音量-", delegate { VolumeStep(-1); });
+            btnDown.MinimumSize = new Size(96, 34);
+            Button btnMute = NewButton("🔇 静音", delegate { VolumeMute(); });
+            btnMute.MinimumSize = new Size(96, 34);
+            Button btnUp = NewButton("🔊 音量+", delegate { VolumeStep(1); });
+            btnUp.MinimumSize = new Size(96, 34);
+            Button btnReset = NewButton("默认热键", delegate { ResetVolumeHotkeys(); });
+            btnReset.MinimumSize = new Size(96, 34);
+            flow.Controls.Add(btnDown);
+            flow.Controls.Add(btnMute);
+            flow.Controls.Add(btnUp);
+            flow.Controls.Add(btnReset);
+            t.Controls.Add(flow, 0, 1);
+
+            Label hint = new Label();
+            hint.Text = "热键只作用于当前前台进程；同名多进程（Chrome / Electron 等）自动同步。热键会被拦截，不再传给前台程序。"
+                + "点击热键框后直接按新组合键修改（Esc 取消）。";
+            hint.ForeColor = Color.Gray;
+            hint.AutoSize = true;
+            hint.MaximumSize = new Size(Math.Max(360, ClientSize.Width - 100), 0);
+            hint.Margin = new Padding(2, 6, 2, 2);
+            t.Controls.Add(hint, 0, 2);
+
+            g.Controls.Add(t);
+            _root.Controls.Add(g, 0, 3);
+
+            // wire the events only after the initial values are in place
+            _volEnabled.CheckedChanged += delegate { if (!_volSyncing) ApplyVolumeSettings(true); };
+            _volStep.ValueChanged += delegate { if (!_volSyncing) ApplyVolumeSettings(true); };
+            _volMuteKey.Enter += BeginHotkeyCapture;
+            _volMuteKey.Leave += EndHotkeyCapture;
+            _volUpKey.Enter += BeginHotkeyCapture;
+            _volUpKey.Leave += EndHotkeyCapture;
+            _volDownKey.Enter += BeginHotkeyCapture;
+            _volDownKey.Leave += EndHotkeyCapture;
+            // clicking another window must not leave the hook in capture mode
+            Deactivate += delegate { CancelHotkeyCapture(); };
+        }
+
+        private void CancelHotkeyCapture()
+        {
+            VolumeKeys.CancelCapture();
+            if (_volCaptureTimeout != null) _volCaptureTimeout.Stop();
+            if (_volMuteKey != null) _volMuteKey.BackColor = SystemColors.Window;
+            if (_volUpKey != null) _volUpKey.BackColor = SystemColors.Window;
+            if (_volDownKey != null) _volDownKey.BackColor = SystemColors.Window;
+        }
+
+        private TextBox NewHotkeyBox(string text)
+        {
+            TextBox box = new TextBox();
+            box.Text = text;
+            box.ReadOnly = true;
+            box.ShortcutsEnabled = false;
+            box.TextAlign = HorizontalAlignment.Center;
+            box.Width = 118;
+            box.Margin = new Padding(0, 7, 14, 2);
+            box.Cursor = Cursors.Hand;
+            return box;
+        }
+
+        private void AddHotkeyField(FlowLayoutPanel parent, string caption, TextBox box)
+        {
+            Label cap = new Label();
+            cap.Text = caption;
+            cap.AutoSize = true;
+            cap.Margin = new Padding(0, 11, 4, 2);
+            parent.Controls.Add(cap);
+            parent.Controls.Add(box);
+        }
+
+        // The low-level hook captures the combo, so Pause / PrintScreen work
+        // here even though WinForms never raises KeyDown for them.
+        private void BeginHotkeyCapture(object sender, EventArgs e)
+        {
+            TextBox box = sender as TextBox;
+            if (box == null) return;
+            box.Tag = box.Text;
+            box.BackColor = CaptureColor;
+            VolumeKeys.BeginCapture(delegate(Hotkey picked) { CommitHotkey(box, picked); });
+
+            // safety net: never leave the global hook swallowing keys forever
+            if (_volCaptureTimeout == null)
+            {
+                _volCaptureTimeout = new Timer();
+                _volCaptureTimeout.Interval = 10000;
+                _volCaptureTimeout.Tick += delegate
+                {
+                    _volCaptureTimeout.Stop();
+                    CancelHotkeyCapture();
+                    AppendLog("[--] 热键捕获超时，未修改");
+                };
+            }
+            _volCaptureTimeout.Stop();
+            _volCaptureTimeout.Start();
+            AppendLog("[..] 请按下新的热键组合（Esc 取消）");
+        }
+
+        private void EndHotkeyCapture(object sender, EventArgs e)
+        {
+            TextBox box = sender as TextBox;
+            if (box == null) return;
+            box.BackColor = SystemColors.Window;
+            VolumeKeys.CancelCapture();
+            if (_volCaptureTimeout != null) _volCaptureTimeout.Stop();
+        }
+
+        private void CommitHotkey(TextBox box, Hotkey picked)
+        {
+            CancelHotkeyCapture();
+            if (picked.IsEmpty) return;
+
+            if (IsPauseHotkey(picked) || IsDuplicateHotkey(box, picked))
+            {
+                string previous = box.Tag as string;
+                if (previous != null) box.Text = previous;
+                AppendLog("[WARN] 组合 " + picked.ToString() + " 已被占用（时停 Alt+` 或其它音量热键），未修改");
+                return;
+            }
+
+            box.Text = picked.ToString();
+            ApplyVolumeSettings(true);
+            AppendLog("[OK] 热键已更新: " + picked.ToString());
+        }
+
+        private static bool IsPauseHotkey(Hotkey h)
+        {
+            return h.Vk == Win32.VK_OEM_3 && h.Alt && !h.Ctrl && !h.Shift && !h.Win;
+        }
+
+        private bool IsDuplicateHotkey(TextBox box, Hotkey h)
+        {
+            TextBox[] all = new TextBox[] { _volMuteKey, _volUpKey, _volDownKey };
+            foreach (TextBox other in all)
+            {
+                if (other == null || other == box) continue;
+                Hotkey o = Hotkey.Parse(other.Text);
+                if (o.IsEmpty) continue;
+                if (o.Vk == h.Vk && o.Ctrl == h.Ctrl && o.Alt == h.Alt &&
+                    o.Shift == h.Shift && o.Win == h.Win) return true;
+            }
+            return false;
+        }
+
+        private void ResetVolumeHotkeys()
+        {
+            _volSyncing = true;
+            _volMuteKey.Text = DefaultVolumeMuteKey;
+            _volUpKey.Text = DefaultVolumeUpKey;
+            _volDownKey.Text = DefaultVolumeDownKey;
+            _volEnabled.Checked = true;
+            _volStep.Value = 2;
+            _volSyncing = false;
+            ApplyVolumeSettings(true);
+            AppendLog("[OK] 音量热键已恢复默认: 静音 Pause · 音量 Ctrl+Alt+↑ / Ctrl+Alt+↓");
+        }
+
+        private void ApplyVolumeSettings(bool save)
+        {
+            if (_volMuteKey == null || _volStep == null || _volEnabled == null) return;
+
+            Hotkey mute = Hotkey.Parse(_volMuteKey.Text);
+            Hotkey up = Hotkey.Parse(_volUpKey.Text);
+            Hotkey down = Hotkey.Parse(_volDownKey.Text);
+
+            VolumeKeys.SetHotkeys(mute, up, down);
+            VolumeKeys.Enabled = _volEnabled.Checked;
+            _volStepPct = (int)_volStep.Value;
+
+            if (!save) return;
+
+            AppendLog(string.Format("{0} 音量热键: 静音 [{1}] · 音量- [{2}] · 音量+ [{3}] · 步进 {4}%",
+                _volEnabled.Checked ? "[OK]" : "[--]",
+                KeyText(mute), KeyText(down), KeyText(up), _volStepPct));
+            SaveWindowState();
+        }
+
+        private static string KeyText(Hotkey h)
+        {
+            return h.IsEmpty ? "未设置" : h.ToString();
+        }
+
+        // called on the hotkey worker thread AND on the UI thread
+        private void VolumeStep(int dir)
+        {
+            int pct = _volStepPct;
+            if (pct < 1) pct = 1;
+            AudioStatus st = CoreAudio.AdjustForeground(dir * (pct / 100f));
+            if (!st.Ok)
+                PowerControl.Logger("[ERR] 音量调节失败: " + (st.Error == null ? "未知错误" : st.Error));
+            UpdateVolumeLabel(st);
+            VolumeHud.Show(st);
+        }
+
+        private void VolumeMute()
+        {
+            AudioStatus st = CoreAudio.ToggleForegroundMute();
+            if (!st.Ok)
+            {
+                PowerControl.Logger("[ERR] 静音切换失败: " + (st.Error == null ? "未知错误" : st.Error));
+            }
+            else if (st.HasAudio)
+            {
+                PowerControl.LogEvent("volume", st.AppName + (st.Muted ? " muted" : " unmuted"));
+            }
+            UpdateVolumeLabel(st);
+            VolumeHud.Show(st);
+        }
+
+        private void UpdateVolumeLabel(AudioStatus st)
+        {
+            if (_volStatus == null || _volStatus.IsDisposed) return;
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<AudioStatus>(UpdateVolumeLabel), st); } catch { }
+                return;
+            }
+
+            if (!st.Ok)
+            {
+                _volStatus.Text = "前台: 音量控制不可用";
+                _volStatus.ForeColor = WarnColor();
+                return;
+            }
+
+            string app = st.AppName.Length > 0 ? st.AppName : "(无前台窗口)";
+            if (!st.HasAudio)
+            {
+                _volStatus.Text = "前台: " + app + " · 无音频会话";
+                _volStatus.ForeColor = Color.Gray;
+            }
+            else if (st.Muted)
+            {
+                _volStatus.Text = "前台: " + app + " · 已静音";
+                _volStatus.ForeColor = WarnColor();
+            }
+            else
+            {
+                int pct = (int)Math.Round(st.Volume * 100f);
+                _volStatus.Text = "前台: " + app + " · " + pct + "%";
+                _volStatus.ForeColor = OkColor();
+            }
+        }
+
+        // poll on a worker thread: a hung audio service must never freeze the UI
+        private void VolTimerTick(object sender, EventArgs e)
+        {
+            System.Threading.ThreadPool.QueueUserWorkItem(delegate(object state)
+            {
+                UpdateVolumeLabel(CoreAudio.QueryForeground());
+            });
+        }
+
         private void BuildLogGroup()
         {
             GroupBox g = NewGroup("运行日志");
@@ -953,6 +1305,10 @@ namespace GenshinTweak
             {
                 _miVideo, _miWork, _miGame, _miCustom, _miDefault
             });
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("静音前台应用", null, delegate { VolumeMute(); });
+            menu.Items.Add("前台音量 +", null, delegate { VolumeStep(1); });
+            menu.Items.Add("前台音量 -", null, delegate { VolumeStep(-1); });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("显示主窗口", null, delegate { ShowWindow(); });
             menu.Items.Add("退出并恢复硬件", null, delegate { RealExit(); });
@@ -1061,8 +1417,15 @@ namespace GenshinTweak
         // ====================================================================
         // helpers
         // ====================================================================
+        // may be called from the volume hotkey worker thread -> marshal to UI
         private void AppendLog(string msg)
         {
+            if (_logBox == null || _logBox.IsDisposed) return;
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<string>(AppendLog), msg); } catch { }
+                return;
+            }
             string line = string.Format("[{0:HH:mm:ss}] {1}\r\n", DateTime.Now, msg);
             if (_logBox.TextLength > 32000) _logBox.Clear();
             _logBox.AppendText(line);
@@ -1187,6 +1550,11 @@ namespace GenshinTweak
                     else if (k == "gpu") int.TryParse(v, out _savedGpu);
                     else if (k == "watt") int.TryParse(v, out _savedWatt);
                     else if (k == "cpu") int.TryParse(v, out _savedCpu);
+                    else if (k == "vol") _savedVolEnabled = (v != "0");
+                    else if (k == "volstep") int.TryParse(v, out _savedVolStep);
+                    else if (k == "volmute") _savedVolMute = v;
+                    else if (k == "volup") _savedVolUp = v;
+                    else if (k == "voldown") _savedVolDown = v;
                 }
                 if (state == "normal" && w > 200 && h > 200)
                 {
@@ -1215,6 +1583,14 @@ namespace GenshinTweak
                 {
                     profile = string.Format("mode={0}\r\ngpu={1}\r\nwatt={2}\r\ncpu={3}\r\n",
                         _modeKey, _gpuClock.Value, _gpuWatt.Value, _cpuMax.Value);
+                }
+                if (_volEnabled != null && _volStep != null &&
+                    _volMuteKey != null && _volUpKey != null && _volDownKey != null)
+                {
+                    profile += string.Format(
+                        "vol={0}\r\nvolstep={1}\r\nvolmute={2}\r\nvolup={3}\r\nvoldown={4}\r\n",
+                        _volEnabled.Checked ? "1" : "0", _volStep.Value,
+                        _volMuteKey.Text, _volUpKey.Text, _volDownKey.Text);
                 }
                 File.WriteAllText(path, string.Format(
                     "state={0}\r\nx={1}\r\ny={2}\r\nw={3}\r\nh={4}\r\n{5}",
@@ -1281,6 +1657,13 @@ namespace GenshinTweak
                 PowerControl.LogEvent("exit", "hardware restored");
             }
             catch { }
+            try
+            {
+                VolumeKeys.Uninstall();
+                VolumeHud.Close();
+                if (_volTimer != null) _volTimer.Stop();
+            }
+            catch { }
             Win32.UnregisterHotKey(Handle, HOTKEY_ID);
             _tray.Visible = false;
             Application.Exit();
@@ -1309,6 +1692,7 @@ namespace GenshinTweak
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             SaveWindowState();
+            CancelHotkeyCapture();
             if (e.CloseReason == CloseReason.UserClosing && !_reallyExiting)
             {
                 e.Cancel = true;
@@ -1339,6 +1723,10 @@ namespace GenshinTweak
                         if (kv.Value != null) { try { kv.Value.Dispose(); } catch { } }
                     }
                 }
+                try { VolumeKeys.Uninstall(); } catch { }
+                try { VolumeHud.Close(); } catch { }
+                if (_volTimer != null) { try { _volTimer.Dispose(); } catch { } }
+                if (_volCaptureTimeout != null) { try { _volCaptureTimeout.Dispose(); } catch { } }
                 Toast.Close();
             }
             base.Dispose(disposing);

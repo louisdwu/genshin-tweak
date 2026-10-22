@@ -26,7 +26,7 @@ if not errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] Compiling src\genshin-tweak.cs ...
+echo [1/2] Compiling src\*.cs ...
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ ^
     /out:genshin-tweak.exe ^
     /win32manifest:src\app.manifest ^
@@ -38,7 +38,7 @@ echo [1/2] Compiling src\genshin-tweak.cs ...
     /resource:src\tray_game.ico,tray_game.ico ^
     /resource:src\tray_custom.ico,tray_custom.ico ^
     /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
-    src\genshin-tweak.cs
+    src\*.cs
 if errorlevel 1 (
     echo.
     echo [ERROR] Build failed. See compiler errors above.
