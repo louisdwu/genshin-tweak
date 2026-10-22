@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-cd /d "%~dp0"
+pushd "%~dp0" || (echo [ERROR] Cannot enter script directory. & pause & exit /b 1)
 
 :: ============================================================
 :: genshin-tweak build script
@@ -35,4 +35,5 @@ echo.
 echo Run: double-click genshin-tweak.exe (UAC prompt appears, this is expected).
 echo.
 pause
+popd
 exit /b 0

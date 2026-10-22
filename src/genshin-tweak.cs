@@ -756,7 +756,9 @@ namespace GenshinTweak
             valueLabel.Size = new Size(56, 20);
             parent.Controls.Add(valueLabel);
 
-            tb.ValueChanged += delegate { valueLabel.Text = tb.Value.ToString(); };
+            // CS1628: out params cannot be captured by anonymous methods
+            Label val = valueLabel;
+            tb.ValueChanged += delegate { val.Text = tb.Value.ToString(); };
             return tb;
         }
 
