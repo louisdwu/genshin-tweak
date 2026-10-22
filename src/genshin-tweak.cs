@@ -15,6 +15,7 @@
 // ============================================================================
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -601,6 +602,9 @@ namespace GenshinTweak
         private Label _cpuLabel;
         private TableLayoutPanel _root;
         private Icon _appIcon;
+        private Dictionary<string, Icon> _modeIcons;
+        private string _modeName = "默认";
+        private bool _iconFallback;
 
         public MainForm()
         {
@@ -624,7 +628,10 @@ namespace GenshinTweak
             }
 
             BuildUi();
+            LoadModeIcons();
             BuildTray();
+            if (_iconFallback)
+                AppendLog("[WARN] 嵌入图标加载失败, 使用系统默认图标");
 
             PowerControl.Logger = AppendLog;
 
@@ -869,6 +876,7 @@ namespace GenshinTweak
             AppendLog((gpu && cpu ? "[OK]" : "[ERR]") +
                 " 🎬 极致省电: GPU 300MHz / 100W, CPU 20%");
             PowerControl.LogEvent("video", "gpu=300MHz,100W cpu=20%");
+            SetTrayMode("video", "🎬 视频");
         }
 
         private void ApplyWorkPreset()
@@ -879,6 +887,7 @@ namespace GenshinTweak
             AppendLog((gpu && cpu ? "[OK]" : "[ERR]") +
                 " 💻 办公编程: GPU 600MHz / 120W, CPU 65%");
             PowerControl.LogEvent("work", "gpu=600MHz,120W cpu=65%");
+            SetTrayMode("work", "💻 办公");
         }
 
         private void ApplyGamePreset()
@@ -889,6 +898,7 @@ namespace GenshinTweak
             AppendLog((gpu && cpu ? "[OK]" : "[ERR]") +
                 " 🔥 游戏模式: GPU 解锁 / 250W, CPU 100%");
             PowerControl.LogEvent("game", "gpu=unlock,250W cpu=100%");
+            SetTrayMode("game", "🔥 游戏");
         }
 
         private void ApplyCustom()
@@ -902,6 +912,7 @@ namespace GenshinTweak
                 string.Format(" 自定义: GPU {0}MHz / {1}W, CPU {2}%", clk, watt, cpuPct));
             PowerControl.LogEvent("custom",
                 string.Format("gpu={0}MHz,{1}W cpu={2}%", clk, watt, cpuPct));
+            SetTrayMode("default", "自定义");
         }
 
         private void ResetDefaults()
@@ -911,6 +922,7 @@ namespace GenshinTweak
             bool cpu = PowerControl.ResetCpu();
             AppendLog((gpu && cpu ? "[OK]" : "[ERR]") + " 已恢复默认: GPU 解锁, CPU 100%");
             PowerControl.LogEvent("reset", "all unlocked");
+            SetTrayMode("default", "默认");
         }
 
         private void SyncSliders(int clk, int watt, int cpu)
@@ -935,14 +947,14 @@ namespace GenshinTweak
                 _pauseStatus.Text = "❄ 游戏已时停";
                 _pauseStatus.ForeColor = WarnColor();
                 _pauseBtn.Text = "恢复运行 (Alt+`)";
-                _tray.Text = "Genshin Tweak | ❄ 已时停";
+                _tray.Text = string.Format("Genshin Tweak | {0} | ❄ 已时停", _modeName);
             }
             else
             {
                 _pauseStatus.Text = "▶ 游戏未运行 / 未时停";
                 _pauseStatus.ForeColor = OkColor();
                 _pauseBtn.Text = "切换时停 (Alt+`)";
-                _tray.Text = "Genshin Tweak | ▶ 运行中";
+                _tray.Text = string.Format("Genshin Tweak | {0} | ▶ 运行中", _modeName);
             }
         }
 
@@ -965,11 +977,51 @@ namespace GenshinTweak
             if (cpu >= 0) _cpuLabel.Text = string.Format("CPU: {0:0}%", cpu);
         }
 
-        // pull the icon embedded via csc /win32icon from the running exe
+        // icon priority: managed resource (csc /resource) -> exe win32 icon -> system
         private Icon LoadAppIcon()
         {
+            try
+            {
+                System.Reflection.Assembly asm = System.Reflection.Assembly.GetExecutingAssembly();
+                using (System.IO.Stream s = asm.GetManifestResourceStream("app.ico"))
+                {
+                    if (s != null) return new Icon(s);
+                }
+            }
+            catch { }
+            _iconFallback = true;
             try { return System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); }
-            catch { return SystemIcons.Application; }
+            catch { }
+            return SystemIcons.Application;
+        }
+
+        private void LoadModeIcons()
+        {
+            _modeIcons = new Dictionary<string, Icon>();
+            string[] keys = { "default", "video", "work", "game" };
+            foreach (string key in keys)
+            {
+                try
+                {
+                    System.Reflection.Assembly asm = System.Reflection.Assembly.GetExecutingAssembly();
+                    using (System.IO.Stream s = asm.GetManifestResourceStream("tray_" + key + ".ico"))
+                    {
+                        if (s != null) _modeIcons[key] = new Icon(s);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void SetTrayMode(string key, string label)
+        {
+            _modeName = label;
+            Icon mi;
+            if (_modeIcons != null && _modeIcons.TryGetValue(key, out mi) && mi != null)
+                _tray.Icon = mi;
+            else
+                _tray.Icon = (_appIcon != null) ? _appIcon : SystemIcons.Application;
+            UpdatePauseUi();
         }
 
         private void ShowWindow()
@@ -1035,6 +1087,13 @@ namespace GenshinTweak
                 if (_appIcon != null && !ReferenceEquals(_appIcon, SystemIcons.Application))
                 {
                     try { _appIcon.Dispose(); } catch { }
+                }
+                if (_modeIcons != null)
+                {
+                    foreach (KeyValuePair<string, Icon> kv in _modeIcons)
+                    {
+                        if (kv.Value != null) { try { kv.Value.Dispose(); } catch { } }
+                    }
                 }
                 Toast.Close();
             }

@@ -17,11 +17,25 @@ if not exist "%CSC%" (
     exit /b 1
 )
 
+tasklist /FI "IMAGENAME eq genshin-tweak.exe" 2>nul | find /I "genshin-tweak.exe" >nul
+if not errorlevel 1 (
+    echo [ERROR] genshin-tweak.exe is still running, probably in the tray.
+    echo         Exit it first: tray icon -^> Exit and restore hardware.
+    pause
+    popd
+    exit /b 1
+)
+
 echo [1/2] Compiling src\genshin-tweak.cs ...
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ ^
     /out:genshin-tweak.exe ^
     /win32manifest:src\app.manifest ^
     /win32icon:src\app.ico ^
+    /resource:src\app.ico,app.ico ^
+    /resource:src\tray_default.ico,tray_default.ico ^
+    /resource:src\tray_video.ico,tray_video.ico ^
+    /resource:src\tray_work.ico,tray_work.ico ^
+    /resource:src\tray_game.ico,tray_game.ico ^
     /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
     src\genshin-tweak.cs
 if errorlevel 1 (
