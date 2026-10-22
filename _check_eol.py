@@ -23,6 +23,7 @@ def check_file(fp):
         data = f.read()
     crlf = data.count(b'\r\n')
     lf = data.count(b'\n') - crlf          # standalone LF
+    cr_orphan = data.count(b'\r') - crlf   # stray CR (e.g. \r\r\n corruption)
     bom = data.startswith(b'\xef\xbb\xbf')
     ext = os.path.splitext(fp)[1].lower()
 
@@ -34,6 +35,8 @@ def check_file(fp):
         return True, 'no rules'
 
     msgs = []
+    if cr_orphan > 0:
+        msgs.append(f'{cr_orphan} orphan CR (broken line endings)')
     if want_crlf and lf > 0:
         msgs.append(f'{lf} LF-only line(s)')
     if (not want_crlf) and crlf > 0:

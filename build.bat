@@ -21,6 +21,7 @@ echo [1/2] Compiling src\genshin-tweak.cs ...
 "%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ ^
     /out:genshin-tweak.exe ^
     /win32manifest:src\app.manifest ^
+    /win32icon:src\app.ico ^
     /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
     src\genshin-tweak.cs
 if errorlevel 1 (

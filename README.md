@@ -41,6 +41,7 @@ build.bat
 genshin-tweak/
 ├── src/genshin-tweak.cs   ← 全部源码（单文件）
 ├── src/app.manifest       ← requireAdministrator UAC 清单
+├── src/app.ico            ← 程序图标 (csc /win32icon 嵌入 exe, 标题栏/托盘/资源管理器)
 ├── build.bat              ← 一键编译（系统自带 csc.exe）
 ├── genshin-tweak.exe      ← 构建产物（不入库）
 ├── _check_eol.py          ← 行尾/BOM 检查（Linux/Windows 通用）
