@@ -605,8 +605,14 @@ namespace GenshinTweak
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(508, 512);
+            ClientSize = new Size(568, 548);
             Icon = SystemIcons.Application;
+
+            // DPI: geometry below is designed at 96 DPI. With dpiAware in the
+            // manifest we must let WinForms scale every control, otherwise
+            // fonts grow at 125%/150% while pixels stay fixed -> overlap.
+            AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScaleDimensions = new SizeF(96F, 96F);
 
             BuildUi();
             BuildTray();
@@ -647,7 +653,7 @@ namespace GenshinTweak
         private void BuildUi()
         {
             // ---- presets ----
-            GroupBox gPreset = AddGroup(8, 66, "一键场景预设");
+            GroupBox gPreset = AddGroup(8, 70, "一键场景预设");
             string[] names = { "🎬 极致省电看视频", "💻 多网页/IDE 办公", "🔥 火力全开玩游戏" };
             EventHandler[] handlers =
             {
@@ -659,8 +665,8 @@ namespace GenshinTweak
             {
                 Button b = new Button();
                 b.Text = names[i];
-                b.Size = new Size(150, 30);
-                b.Location = new Point(14 + i * 154, 24);
+                b.Size = new Size(166, 32);
+                b.Location = new Point(14 + i * 172, 26);
                 b.Click += handlers[i];
                 gPreset.Controls.Add(b);
             }
@@ -668,64 +674,64 @@ namespace GenshinTweak
             _cpuLabel = new Label();
             _cpuLabel.Text = "CPU: --%";
             _cpuLabel.ForeColor = Color.Gray;
-            _cpuLabel.Location = new Point(396, 4);
-            _cpuLabel.Size = new Size(86, 16);
+            _cpuLabel.Location = new Point(438, 4);
+            _cpuLabel.Size = new Size(100, 18);
             gPreset.Controls.Add(_cpuLabel);
 
             // ---- custom limits ----
-            GroupBox gCustom = AddGroup(80, 178, "自定义限频");
-            _gpuClock = AddSlider(gCustom, 0, "GPU 时钟 (MHz)", 300, 2100, 100, 300, out _gpuClockVal);
-            _gpuWatt  = AddSlider(gCustom, 1, "GPU 功耗 (W)",   50, 250, 10, 100, out _gpuWattVal);
-            _cpuMax   = AddSlider(gCustom, 2, "CPU 上限 (%)",   5, 100, 5, 100, out _cpuMaxVal);
+            GroupBox gCustom = AddGroup(84, 182, "自定义限频");
+            _gpuClock = AddSlider(gCustom, 0, "GPU 时钟 MHz", 300, 2100, 100, 300, out _gpuClockVal);
+            _gpuWatt  = AddSlider(gCustom, 1, "GPU 功耗 W",   50, 250, 10, 100, out _gpuWattVal);
+            _cpuMax   = AddSlider(gCustom, 2, "CPU 上限 %",   5, 100, 5, 100, out _cpuMaxVal);
 
             Button applyCustom = new Button();
             applyCustom.Text = "应用自定义";
-            applyCustom.Size = new Size(150, 28);
-            applyCustom.Location = new Point(14, 138);
+            applyCustom.Size = new Size(166, 30);
+            applyCustom.Location = new Point(14, 140);
             applyCustom.Click += delegate { ApplyCustom(); };
             gCustom.Controls.Add(applyCustom);
 
             Button resetAll = new Button();
             resetAll.Text = "恢复默认 (全解锁)";
-            resetAll.Size = new Size(150, 28);
-            resetAll.Location = new Point(178, 138);
+            resetAll.Size = new Size(166, 30);
+            resetAll.Location = new Point(186, 140);
             resetAll.Click += delegate { ResetDefaults(); };
             gCustom.Controls.Add(resetAll);
 
             // ---- pause ----
-            GroupBox gPause = AddGroup(264, 92, "游戏时停 — 全局热键 Alt+`");
+            GroupBox gPause = AddGroup(272, 96, "游戏时停 — 全局热键 Alt+`");
             _pauseStatus = new Label();
             _pauseStatus.Text = "▶ 游戏未运行 / 未时停";
             _pauseStatus.ForeColor = Color.FromArgb(166, 227, 161);
-            _pauseStatus.Location = new Point(16, 24);
-            _pauseStatus.Size = new Size(300, 22);
+            _pauseStatus.Location = new Point(16, 26);
+            _pauseStatus.Size = new Size(330, 22);
             gPause.Controls.Add(_pauseStatus);
 
             _pauseBtn = new Button();
             _pauseBtn.Text = "切换时停 (Alt+`)";
-            _pauseBtn.Size = new Size(150, 30);
-            _pauseBtn.Location = new Point(16, 50);
+            _pauseBtn.Size = new Size(166, 32);
+            _pauseBtn.Location = new Point(16, 54);
             _pauseBtn.Click += delegate { PauseController.Toggle(); };
             gPause.Controls.Add(_pauseBtn);
 
             Label hint = new Label();
             hint.Text = "原理: 让窗口进入系统移动模态循环，\r\n游戏主线程被阻塞即“时停”。ESC 恢复。";
             hint.ForeColor = Color.Gray;
-            hint.Location = new Point(178, 46);
-            hint.Size = new Size(296, 40);
+            hint.Location = new Point(194, 50);
+            hint.Size = new Size(340, 44);
             gPause.Controls.Add(hint);
 
             // ---- log ----
-            GroupBox gLog = AddGroup(362, 138, "运行日志");
+            GroupBox gLog = AddGroup(374, 162, "运行日志");
             _logBox = new TextBox();
             _logBox.Multiline = true;
             _logBox.ReadOnly = true;
             _logBox.ScrollBars = ScrollBars.Vertical;
-            _logBox.Font = new Font("Consolas", 8.75F);
+            _logBox.Font = new Font("Consolas", 9F);
             _logBox.BackColor = Color.FromArgb(24, 24, 28);
             _logBox.ForeColor = Color.FromArgb(166, 227, 161);
-            _logBox.Location = new Point(12, 20);
-            _logBox.Size = new Size(460, 108);
+            _logBox.Location = new Point(12, 22);
+            _logBox.Size = new Size(520, 130);
             gLog.Controls.Add(_logBox);
         }
 
@@ -734,8 +740,8 @@ namespace GenshinTweak
         {
             Label cap = new Label();
             cap.Text = caption;
-            cap.Location = new Point(14, 22 + row * 36);
-            cap.Size = new Size(100, 20);
+            cap.Location = new Point(14, 24 + row * 36);
+            cap.Size = new Size(120, 22);
             parent.Controls.Add(cap);
 
             TrackBar tb = new TrackBar();
@@ -746,14 +752,14 @@ namespace GenshinTweak
             tb.SmallChange = tick;
             tb.LargeChange = tick * 2;
             tb.Value = initial;
-            tb.Location = new Point(118, 18 + row * 36);
-            tb.Size = new Size(290, 30);
+            tb.Location = new Point(140, 20 + row * 36);
+            tb.Size = new Size(310, 32);
             parent.Controls.Add(tb);
 
             valueLabel = new Label();
             valueLabel.Text = initial.ToString();
-            valueLabel.Location = new Point(414, 24 + row * 36);
-            valueLabel.Size = new Size(56, 20);
+            valueLabel.Location = new Point(458, 26 + row * 36);
+            valueLabel.Size = new Size(70, 22);
             parent.Controls.Add(valueLabel);
 
             // CS1628: out params cannot be captured by anonymous methods
