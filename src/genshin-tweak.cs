@@ -674,6 +674,7 @@ namespace GenshinTweak
         private Label _volStatus;
         private Timer _volTimer;
         private Timer _volCaptureTimeout;
+        private ToolTip _volTip;
         private volatile int _volStepPct = 2;
         private bool _volSyncing;
         private bool _savedVolEnabled = true;
@@ -707,8 +708,8 @@ namespace GenshinTweak
             using (Graphics g = CreateGraphics())
             {
                 float f = g.DpiX / 96f;
-                ClientSize = new Size((int)(620 * f), (int)(720 * f));
-                MinimumSize = new Size((int)(560 * f), (int)(640 * f));
+                ClientSize = new Size((int)(640 * f), (int)(800 * f));
+                MinimumSize = new Size((int)(560 * f), (int)(680 * f));
             }
 
             LoadWindowStatePrefs();
@@ -922,15 +923,15 @@ namespace GenshinTweak
         // ====================================================================
         private void BuildVolumeGroup()
         {
-            GroupBox g = NewGroup("前台应用音量 — 独立控制焦点窗口，不影响系统音量");
+            GroupBox g = NewGroup("前台应用音量 — 独立控制焦点窗口（点热键框可重录）");
 
             TableLayoutPanel t = new TableLayoutPanel();
             t.Dock = DockStyle.Fill;
             t.AutoSize = true;
             t.ColumnCount = 1;
-            t.RowCount = 3;
+            t.RowCount = 2;
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            for (int i = 0; i < 3; i++) t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            for (int i = 0; i < 2; i++) t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             _volStatus = new Label();
             _volStatus.Text = "前台: --";
@@ -987,14 +988,18 @@ namespace GenshinTweak
             flow.Controls.Add(btnReset);
             t.Controls.Add(flow, 0, 1);
 
-            Label hint = new Label();
-            hint.Text = "热键只作用于当前前台进程；同名多进程（Chrome / Electron 等）自动同步。热键会被拦截，不再传给前台程序。"
-                + "点击热键框后直接按新组合键修改（Esc 取消）。";
-            hint.ForeColor = Color.Gray;
-            hint.AutoSize = true;
-            hint.MaximumSize = new Size(Math.Max(360, ClientSize.Width - 100), 0);
-            hint.Margin = new Padding(2, 6, 2, 2);
-            t.Controls.Add(hint, 0, 2);
+            // the details live in a tooltip so the log below keeps its space
+            _volTip = new ToolTip();
+            _volTip.AutoPopDelay = 15000;
+            _volTip.InitialDelay = 400;
+            _volTip.ReshowDelay = 100;
+            string tip = "热键只作用于当前前台应用；同名多进程（Chrome / Electron 等）会自动同步。"
+                + "热键会被拦截，不再传给前台程序。点输入框后直接按新组合键即可修改（Esc 取消）。";
+            _volTip.SetToolTip(_volEnabled, tip);
+            _volTip.SetToolTip(_volStep, tip);
+            _volTip.SetToolTip(_volMuteKey, tip);
+            _volTip.SetToolTip(_volUpKey, tip);
+            _volTip.SetToolTip(_volDownKey, tip);
 
             g.Controls.Add(t);
             _root.Controls.Add(g, 0, 3);
@@ -1239,7 +1244,11 @@ namespace GenshinTweak
             _logBox.ForeColor = Color.FromArgb(166, 227, 161);
             _logBox.Dock = DockStyle.Fill;
             g.Controls.Add(_logBox);
-            _root.Controls.Add(g, 0, 3);
+            // The percent row only gets its final height after the form has been
+            // laid out; a layout pass can resize the group without re-docking the
+            // child, which left the log box one line high. Force the child layout.
+            g.Resize += delegate { g.PerformLayout(); };
+            _root.Controls.Add(g, 0, 4);
         }
 
         private TrackBar AddSlider(TableLayoutPanel parent, int row, string caption,
@@ -1558,6 +1567,10 @@ namespace GenshinTweak
                 }
                 if (state == "normal" && w > 200 && h > 200)
                 {
+                    // never restore a window too small for the stacked panels
+                    // (an old ui.ini would otherwise squeeze the log to one line)
+                    if (w < MinimumSize.Width) w = MinimumSize.Width;
+                    if (h < MinimumSize.Height) h = MinimumSize.Height;
                     Rectangle vs = SystemInformation.VirtualScreen;
                     if (x < vs.Left - 40 || x > vs.Right - 80) x = vs.Left + 40;
                     if (y < vs.Top) y = vs.Top;
@@ -1682,6 +1695,19 @@ namespace GenshinTweak
             base.WndProc(ref m);
         }
 
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            // The log lives in the percent row: its final height is only known
+            // after the window is shown, so re-dock the box explicitly.
+            ReDockLogBox();
+        }
+
+        private void ReDockLogBox()
+        {
+            if (_logBox != null && _logBox.Parent != null) _logBox.Parent.PerformLayout();
+        }
+
         protected override void OnLoad(EventArgs e)
         {
             PauseController.StateChanged += UpdatePauseUi;
@@ -1727,6 +1753,7 @@ namespace GenshinTweak
                 try { VolumeHud.Close(); } catch { }
                 if (_volTimer != null) { try { _volTimer.Dispose(); } catch { } }
                 if (_volCaptureTimeout != null) { try { _volCaptureTimeout.Dispose(); } catch { } }
+                if (_volTip != null) { try { _volTip.Dispose(); } catch { } }
                 Toast.Close();
             }
             base.Dispose(disposing);
