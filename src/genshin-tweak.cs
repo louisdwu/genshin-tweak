@@ -340,6 +340,10 @@ namespace GenshinTweak
                     p.BeginErrorReadLine();
                     p.StandardOutput.ReadToEnd();
                     p.WaitForExit(10000);
+                    if (!p.HasExited) { try { p.Kill(); } catch { } }
+                    // parameterless WaitForExit drains the async stderr events
+                    // into errBuf (the timed overload does NOT do that)
+                    p.WaitForExit();
                     stderr = errBuf.ToString();
                     return p.HasExited ? p.ExitCode : -1;
                 }
@@ -381,7 +385,9 @@ namespace GenshinTweak
                 return false;
             }
             int rcPl = RunCapture("nvidia-smi", "-pl " + powerWatt, out err);
-            if (rcPl != 0 && err.ToLower().Contains("out of range"))
+            string errLow = err.ToLower();
+            if (rcPl != 0 && (errLow.Contains("out of range")
+                           || errLow.Contains("not in a valid range")))
             {
                 Logger("[WARN] power limit " + powerWatt + "W out of range, fallback to 100W");
                 RunCapture("nvidia-smi", "-pl 100", out err);
@@ -607,6 +613,8 @@ namespace GenshinTweak
         private string _modeKey = "default";
         private bool _iconFallback;
         private bool _syncing;
+        private FormWindowState _preHideState = FormWindowState.Maximized;
+        private bool _uiReady;
 
         private Button _btnVideo, _btnWork, _btnGame, _btnCustom;
         private ToolStripMenuItem _miVideo, _miWork, _miGame, _miCustom, _miDefault;
@@ -638,6 +646,7 @@ namespace GenshinTweak
             }
 
             LoadWindowStatePrefs();
+            _uiReady = true;
 
             BuildUi();
             LoadModeIcons();
@@ -1130,6 +1139,7 @@ namespace GenshinTweak
 
         private void SaveWindowState()
         {
+            if (!_uiReady) return;   // ctor resizes must not overwrite the file
             try
             {
                 if (WindowState == FormWindowState.Minimized) return;
@@ -1158,8 +1168,8 @@ namespace GenshinTweak
 
         private void ShowWindow()
         {
-            Show();
-            WindowState = FormWindowState.Normal;
+            if (!Visible) Show();
+            WindowState = _preHideState;   // restore state from before hiding
             Activate();
         }
 
@@ -1203,6 +1213,8 @@ namespace GenshinTweak
             if (e.CloseReason == CloseReason.UserClosing && !_reallyExiting)
             {
                 e.Cancel = true;
+                _preHideState = (WindowState == FormWindowState.Minimized)
+                    ? FormWindowState.Normal : WindowState;
                 Hide();
                 return;
             }
