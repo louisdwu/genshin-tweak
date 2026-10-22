@@ -1,0 +1,22 @@
+# ============================================================
+# Genshin Tweak — Git Attributes
+# Dev: Linux LXC (DSH)  ->  Runtime: Windows 10/11
+# ============================================================
+
+# ---- line endings (critical) ----
+*.bat      text eol=crlf
+*.cs       text eol=crlf
+*.manifest text eol=crlf
+*.py       text eol=lf
+*.md       text
+*.json     text
+*.csv      text
+
+# ---- binary ----
+*.png      binary
+*.jpg      binary
+*.ico      binary
+*.exe      binary
+
+# ---- fallback ----
+*          text=auto

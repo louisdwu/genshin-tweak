@@ -1,8 +1,12 @@
 window_pause.log
-/window_pause.log
+error.log
 __pycache__/
 logs/
 window_state.json
 *.csv
 *.pyc
 .dsh-remote-meta.json
+
+# build artifacts
+genshin-tweak.exe
+*.pdb
