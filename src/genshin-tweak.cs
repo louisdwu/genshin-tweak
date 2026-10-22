@@ -596,23 +596,26 @@ namespace GenshinTweak
         private TextBox _logBox;
         private Timer _cpuTimer;
         private Label _cpuLabel;
+        private TableLayoutPanel _root;
 
         public MainForm()
         {
             // ---- window ----
             Text = "Genshin Tweak — 原神工具箱";
-            Font = new Font("Microsoft YaHei UI", 9F);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
+            Font = new Font("Microsoft YaHei UI", 9.75F);
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(568, 548);
             Icon = SystemIcons.Application;
 
-            // DPI: geometry below is designed at 96 DPI. With dpiAware in the
-            // manifest we must let WinForms scale every control, otherwise
-            // fonts grow at 125%/150% while pixels stay fixed -> overlap.
-            AutoScaleMode = AutoScaleMode.Dpi;
-            AutoScaleDimensions = new SizeF(96F, 96F);
+            // layout is AutoSize-based (fonts drive sizes), so it adapts to any
+            // DPI on its own; only the initial/min window size needs scaling
+            using (Graphics g = CreateGraphics())
+            {
+                float f = g.DpiX / 96f;
+                ClientSize = new Size((int)(620 * f), (int)(560 * f));
+                MinimumSize = new Size((int)(560 * f), (int)(500 * f));
+            }
 
             BuildUi();
             BuildTray();
@@ -640,20 +643,56 @@ namespace GenshinTweak
         // ====================================================================
         // UI construction
         // ====================================================================
-        private GroupBox AddGroup(int y, int h, string title)
+        private GroupBox NewGroup(string title)
         {
             GroupBox g = new GroupBox();
             g.Text = title;
-            g.Location = new Point(12, y);
-            g.Size = new Size(484, h);
-            Controls.Add(g);
+            g.AutoSize = true;
+            g.Dock = DockStyle.Fill;
+            g.Padding = new Padding(10, 2, 10, 6);
             return g;
+        }
+
+        private Button NewButton(string text, EventHandler onClick)
+        {
+            Button b = new Button();
+            b.Text = text;
+            b.AutoSize = true;
+            b.MinimumSize = new Size(140, 34);
+            b.Padding = new Padding(6, 2, 6, 2);
+            b.Click += onClick;
+            return b;
         }
 
         private void BuildUi()
         {
-            // ---- presets ----
-            GroupBox gPreset = AddGroup(8, 70, "一键场景预设");
+            _root = new TableLayoutPanel();
+            _root.Dock = DockStyle.Fill;
+            _root.Padding = new Padding(6);
+            _root.ColumnCount = 1;
+            _root.RowCount = 4;
+            _root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            _root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            Controls.Add(_root);
+
+            BuildPresetGroup();
+            BuildCustomGroup();
+            BuildPauseGroup();
+            BuildLogGroup();
+        }
+
+        private void BuildPresetGroup()
+        {
+            GroupBox g = NewGroup("一键场景预设");
+            FlowLayoutPanel flow = new FlowLayoutPanel();
+            flow.Dock = DockStyle.Fill;
+            flow.AutoSize = true;
+            flow.WrapContents = false;
+            g.Controls.Add(flow);
+
             string[] names = { "🎬 极致省电看视频", "💻 多网页/IDE 办公", "🔥 火力全开玩游戏" };
             EventHandler[] handlers =
             {
@@ -663,66 +702,91 @@ namespace GenshinTweak
             };
             for (int i = 0; i < 3; i++)
             {
-                Button b = new Button();
-                b.Text = names[i];
-                b.Size = new Size(166, 32);
-                b.Location = new Point(14 + i * 172, 26);
-                b.Click += handlers[i];
-                gPreset.Controls.Add(b);
+                Button b = NewButton(names[i], handlers[i]);
+                b.MinimumSize = new Size(150, 34);
+                flow.Controls.Add(b);
             }
 
             _cpuLabel = new Label();
             _cpuLabel.Text = "CPU: --%";
             _cpuLabel.ForeColor = Color.Gray;
-            _cpuLabel.Location = new Point(438, 4);
-            _cpuLabel.Size = new Size(100, 18);
-            gPreset.Controls.Add(_cpuLabel);
+            _cpuLabel.AutoSize = true;
+            _cpuLabel.Margin = new Padding(14, 10, 4, 0);
+            flow.Controls.Add(_cpuLabel);
 
-            // ---- custom limits ----
-            GroupBox gCustom = AddGroup(84, 182, "自定义限频");
-            _gpuClock = AddSlider(gCustom, 0, "GPU 时钟 MHz", 300, 2100, 100, 300, out _gpuClockVal);
-            _gpuWatt  = AddSlider(gCustom, 1, "GPU 功耗 W",   50, 250, 10, 100, out _gpuWattVal);
-            _cpuMax   = AddSlider(gCustom, 2, "CPU 上限 %",   5, 100, 5, 100, out _cpuMaxVal);
+            _root.Controls.Add(g, 0, 0);
+        }
 
-            Button applyCustom = new Button();
-            applyCustom.Text = "应用自定义";
-            applyCustom.Size = new Size(166, 30);
-            applyCustom.Location = new Point(14, 140);
-            applyCustom.Click += delegate { ApplyCustom(); };
-            gCustom.Controls.Add(applyCustom);
+        private void BuildCustomGroup()
+        {
+            GroupBox g = NewGroup("自定义限频");
+            TableLayoutPanel t = new TableLayoutPanel();
+            t.Dock = DockStyle.Fill;
+            t.AutoSize = true;
+            t.ColumnCount = 3;
+            t.RowCount = 4;
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            for (int r = 0; r < 4; r++)
+                t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            Button resetAll = new Button();
-            resetAll.Text = "恢复默认 (全解锁)";
-            resetAll.Size = new Size(166, 30);
-            resetAll.Location = new Point(186, 140);
-            resetAll.Click += delegate { ResetDefaults(); };
-            gCustom.Controls.Add(resetAll);
+            _gpuClock = AddSlider(t, 0, "GPU 时钟 MHz", 300, 2100, 100, 300, out _gpuClockVal);
+            _gpuWatt  = AddSlider(t, 1, "GPU 功耗 W",   50, 250, 10, 100, out _gpuWattVal);
+            _cpuMax   = AddSlider(t, 2, "CPU 上限 %",   5, 100, 5, 100, out _cpuMaxVal);
 
-            // ---- pause ----
-            GroupBox gPause = AddGroup(272, 96, "游戏时停 — 全局热键 Alt+`");
+            FlowLayoutPanel btns = new FlowLayoutPanel();
+            btns.Dock = DockStyle.Fill;
+            btns.AutoSize = true;
+            btns.Margin = new Padding(0, 4, 0, 0);
+            btns.Controls.Add(NewButton("应用自定义", delegate { ApplyCustom(); }));
+            btns.Controls.Add(NewButton("恢复默认 (全解锁)", delegate { ResetDefaults(); }));
+            t.Controls.Add(btns, 0, 3);
+            t.SetColumnSpan(btns, 3);
+
+            g.Controls.Add(t);
+            _root.Controls.Add(g, 0, 1);
+        }
+
+        private void BuildPauseGroup()
+        {
+            GroupBox g = NewGroup("游戏时停 — 全局热键 Alt+`");
+            TableLayoutPanel t = new TableLayoutPanel();
+            t.Dock = DockStyle.Fill;
+            t.AutoSize = true;
+            t.ColumnCount = 2;
+            t.RowCount = 2;
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
             _pauseStatus = new Label();
             _pauseStatus.Text = "▶ 游戏未运行 / 未时停";
             _pauseStatus.ForeColor = Color.FromArgb(166, 227, 161);
-            _pauseStatus.Location = new Point(16, 26);
-            _pauseStatus.Size = new Size(330, 22);
-            gPause.Controls.Add(_pauseStatus);
+            _pauseStatus.AutoSize = true;
+            _pauseStatus.Margin = new Padding(2, 2, 2, 6);
+            t.Controls.Add(_pauseStatus, 0, 0);
+            t.SetColumnSpan(_pauseStatus, 2);
 
-            _pauseBtn = new Button();
-            _pauseBtn.Text = "切换时停 (Alt+`)";
-            _pauseBtn.Size = new Size(166, 32);
-            _pauseBtn.Location = new Point(16, 54);
-            _pauseBtn.Click += delegate { PauseController.Toggle(); };
-            gPause.Controls.Add(_pauseBtn);
+            _pauseBtn = NewButton("切换时停 (Alt+`)", delegate { PauseController.Toggle(); });
+            t.Controls.Add(_pauseBtn, 0, 1);
 
             Label hint = new Label();
-            hint.Text = "原理: 让窗口进入系统移动模态循环，\r\n游戏主线程被阻塞即“时停”。ESC 恢复。";
+            hint.Text = "原理: 让窗口进入系统移动模态循环，游戏主线程被阻塞即“时停”。ESC 恢复。";
             hint.ForeColor = Color.Gray;
-            hint.Location = new Point(194, 50);
-            hint.Size = new Size(340, 44);
-            gPause.Controls.Add(hint);
+            hint.AutoSize = true;
+            hint.Margin = new Padding(14, 10, 2, 2);
+            t.Controls.Add(hint, 1, 1);
 
-            // ---- log ----
-            GroupBox gLog = AddGroup(374, 162, "运行日志");
+            g.Controls.Add(t);
+            _root.Controls.Add(g, 0, 2);
+        }
+
+        private void BuildLogGroup()
+        {
+            GroupBox g = NewGroup("运行日志");
+            g.AutoSize = false;               // Fill row -> group takes leftover height
             _logBox = new TextBox();
             _logBox.Multiline = true;
             _logBox.ReadOnly = true;
@@ -730,19 +794,19 @@ namespace GenshinTweak
             _logBox.Font = new Font("Consolas", 9F);
             _logBox.BackColor = Color.FromArgb(24, 24, 28);
             _logBox.ForeColor = Color.FromArgb(166, 227, 161);
-            _logBox.Location = new Point(12, 22);
-            _logBox.Size = new Size(520, 130);
-            gLog.Controls.Add(_logBox);
+            _logBox.Dock = DockStyle.Fill;
+            g.Controls.Add(_logBox);
+            _root.Controls.Add(g, 0, 3);
         }
 
-        private TrackBar AddSlider(GroupBox parent, int row, string caption,
+        private TrackBar AddSlider(TableLayoutPanel parent, int row, string caption,
             int min, int max, int tick, int initial, out Label valueLabel)
         {
             Label cap = new Label();
             cap.Text = caption;
-            cap.Location = new Point(14, 24 + row * 36);
-            cap.Size = new Size(120, 22);
-            parent.Controls.Add(cap);
+            cap.AutoSize = true;
+            cap.Margin = new Padding(2, 10, 8, 2);
+            parent.Controls.Add(cap, 0, row);
 
             TrackBar tb = new TrackBar();
             tb.Minimum = min;
@@ -752,15 +816,15 @@ namespace GenshinTweak
             tb.SmallChange = tick;
             tb.LargeChange = tick * 2;
             tb.Value = initial;
-            tb.Location = new Point(140, 20 + row * 36);
-            tb.Size = new Size(310, 32);
-            parent.Controls.Add(tb);
+            tb.Dock = DockStyle.Fill;
+            tb.Margin = new Padding(2);
+            parent.Controls.Add(tb, 1, row);
 
             valueLabel = new Label();
             valueLabel.Text = initial.ToString();
-            valueLabel.Location = new Point(458, 26 + row * 36);
-            valueLabel.Size = new Size(70, 22);
-            parent.Controls.Add(valueLabel);
+            valueLabel.AutoSize = true;
+            valueLabel.Margin = new Padding(10, 10, 2, 2);
+            parent.Controls.Add(valueLabel, 2, row);
 
             // CS1628: out params cannot be captured by anonymous methods
             Label val = valueLabel;
