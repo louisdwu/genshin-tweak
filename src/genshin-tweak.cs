@@ -329,22 +329,28 @@ namespace GenshinTweak
                 psi.CreateNoWindow = true;
                 psi.RedirectStandardOutput = true;
                 psi.RedirectStandardError = true;
-                StringBuilder errBuf = new StringBuilder();
+                StringBuilder outBuf = new StringBuilder();
                 using (Process p = Process.Start(psi))
                 {
-                    // async stderr read avoids pipe-buffer deadlock; stdout is small
+                    // async reads avoid pipe-buffer deadlock. NOTE: nvidia-smi
+                    // prints many errors on STDOUT, so both streams go into
+                    // one buffer for phrase matching.
                     p.ErrorDataReceived += delegate(object s, DataReceivedEventArgs ev)
                     {
-                        if (ev.Data != null) errBuf.AppendLine(ev.Data);
+                        if (ev.Data != null) outBuf.AppendLine(ev.Data);
+                    };
+                    p.OutputDataReceived += delegate(object s, DataReceivedEventArgs ev)
+                    {
+                        if (ev.Data != null) outBuf.AppendLine(ev.Data);
                     };
                     p.BeginErrorReadLine();
-                    p.StandardOutput.ReadToEnd();
+                    p.BeginOutputReadLine();
                     p.WaitForExit(10000);
                     if (!p.HasExited) { try { p.Kill(); } catch { } }
-                    // parameterless WaitForExit drains the async stderr events
-                    // into errBuf (the timed overload does NOT do that)
+                    // parameterless WaitForExit drains the async events
+                    // into outBuf (the timed overload does NOT do that)
                     p.WaitForExit();
-                    stderr = errBuf.ToString();
+                    stderr = outBuf.ToString();
                     return p.HasExited ? p.ExitCode : -1;
                 }
             }
@@ -359,6 +365,39 @@ namespace GenshinTweak
         {
             string err;
             return RunCapture("nvidia-smi", "", out err) == 0;
+        }
+
+        public static void QueryPowerRange(out int minW, out int maxW)
+        {
+            minW = -1;
+            maxW = -1;
+            string outp;
+            if (RunCapture("nvidia-smi", "-q -d POWER", out outp) != 0) return;
+            minW = ParsePowerLimit(outp, "Min Power Limit");
+            maxW = ParsePowerLimit(outp, "Max Power Limit");
+        }
+
+        // parses lines like "    Min Power Limit            : 100.00 W"
+        private static int ParsePowerLimit(string text, string tag)
+        {
+            foreach (string lineRaw in text.Split('\n'))
+            {
+                string line = lineRaw.Trim();
+                if (line.IndexOf(tag, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                int c = line.IndexOf(':');
+                if (c < 0) continue;
+                string num = "";
+                foreach (char ch in line.Substring(c + 1))
+                {
+                    if (char.IsDigit(ch) || ch == '.') num += ch;
+                    else if (num.Length > 0) break;
+                }
+                double v;
+                if (double.TryParse(num, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out v))
+                    return (int)Math.Round(v);
+            }
+            return -1;
         }
 
         // ---- CPU ------------------------------------------------------------
@@ -612,6 +651,8 @@ namespace GenshinTweak
         private string _modeName = "默认";
         private string _modeKey = "default";
         private bool _iconFallback;
+        private string _savedMode = "";
+        private int _savedGpu, _savedWatt, _savedCpu;
         private bool _syncing;
         private FormWindowState _preHideState = FormWindowState.Maximized;
         private bool _uiReady;
@@ -657,7 +698,24 @@ namespace GenshinTweak
             PowerControl.Logger = AppendLog;
 
             if (!PowerControl.NvidiaAvailable())
+            {
                 AppendLog("[WARN] 未检测到 nvidia-smi，GPU 限频不可用（CPU 部分不受影响）");
+            }
+            else
+            {
+                int minW, maxW;
+                PowerControl.QueryPowerRange(out minW, out maxW);
+                if (minW > 0 || maxW > 0)
+                {
+                    _syncing = true;
+                    if (minW > 0) _gpuWatt.Minimum = Math.Max(1, minW);
+                    if (maxW > 0) _gpuWatt.Maximum = Math.Max(_gpuWatt.Minimum, maxW);
+                    if (_gpuWatt.Value > _gpuWatt.Maximum) _gpuWatt.Value = _gpuWatt.Maximum;
+                    if (_gpuWatt.Value < _gpuWatt.Minimum) _gpuWatt.Value = _gpuWatt.Minimum;
+                    _syncing = false;
+                    AppendLog("[OK] GPU 功耗墙范围: " + _gpuWatt.Minimum + "W - " + _gpuWatt.Maximum + "W (来自驱动)");
+                }
+            }
 
             // ---- global hotkey Alt+` ----
             if (!Win32.RegisterHotKey(Handle, HOTKEY_ID, Win32.MOD_ALT, Win32.VK_OEM_3))
@@ -669,6 +727,7 @@ namespace GenshinTweak
             _cpuTimer.Tick += CpuTimerTick;
             _cpuTimer.Start();
 
+            RestoreProfilePrefs();
             PowerControl.LogEvent("start", "app launched");
             AppendLog("[OK] 启动完成。先选预设或拖动滑条，再进游戏按 Alt+` 时停。");
             UpdatePauseUi();
@@ -1063,6 +1122,7 @@ namespace GenshinTweak
             HighlightPreset(key);
             UpdateTrayChecks(key);
             UpdatePauseUi();
+            SaveWindowState();
         }
 
         private void HighlightPreset(string key)
@@ -1123,6 +1183,10 @@ namespace GenshinTweak
                     else if (k == "y") int.TryParse(v, out y);
                     else if (k == "w") int.TryParse(v, out w);
                     else if (k == "h") int.TryParse(v, out h);
+                    else if (k == "mode") _savedMode = v;
+                    else if (k == "gpu") int.TryParse(v, out _savedGpu);
+                    else if (k == "watt") int.TryParse(v, out _savedWatt);
+                    else if (k == "cpu") int.TryParse(v, out _savedCpu);
                 }
                 if (state == "normal" && w > 200 && h > 200)
                 {
@@ -1146,10 +1210,16 @@ namespace GenshinTweak
                 string path = SettingsPath();
                 string dir = Path.GetDirectoryName(path);
                 if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                string profile = "";
+                if (_gpuClock != null && _gpuWatt != null && _cpuMax != null)
+                {
+                    profile = string.Format("mode={0}\r\ngpu={1}\r\nwatt={2}\r\ncpu={3}\r\n",
+                        _modeKey, _gpuClock.Value, _gpuWatt.Value, _cpuMax.Value);
+                }
                 File.WriteAllText(path, string.Format(
-                    "state={0}\r\nx={1}\r\ny={2}\r\nw={3}\r\nh={4}\r\n",
+                    "state={0}\r\nx={1}\r\ny={2}\r\nw={3}\r\nh={4}\r\n{5}",
                     (WindowState == FormWindowState.Maximized) ? "max" : "normal",
-                    Location.X, Location.Y, Width, Height));
+                    Location.X, Location.Y, Width, Height, profile));
             }
             catch { }
         }
@@ -1164,6 +1234,35 @@ namespace GenshinTweak
         {
             base.OnResizeEnd(e);
             SaveWindowState();
+        }
+
+        // re-apply the last-used mode + custom slider values from ui.ini
+        private void RestoreProfilePrefs()
+        {
+            if (_savedMode == "") return;
+            if (_savedGpu > 0 && _savedWatt > 0 && _savedCpu > 0)
+            {
+                _syncing = true;
+                _gpuClock.Value = Clamp(_gpuClock, _savedGpu);
+                _gpuWatt.Value = Clamp(_gpuWatt, _savedWatt);
+                _cpuMax.Value = Clamp(_cpuMax, _savedCpu);
+                _syncing = false;
+            }
+            if (_savedMode == "video") { ApplyVideoPreset(); }
+            else if (_savedMode == "work") { ApplyWorkPreset(); }
+            else if (_savedMode == "game") { ApplyGamePreset(); }
+            else if (_savedMode == "custom")
+            {
+                if (_savedGpu > 0 && _savedWatt > 0 && _savedCpu > 0)
+                {
+                    bool gpu = PowerControl.ApplyGpuLimit(_gpuClock.Value, _gpuWatt.Value);
+                    bool cpu = PowerControl.ApplyCpuLimit(_cpuMax.Value);
+                    AppendLog((gpu && cpu ? "[OK]" : "[ERR]") + " 恢复上次自定义: GPU "
+                        + _gpuClock.Value + "MHz / " + _gpuWatt.Value + "W, CPU " + _cpuMax.Value + "%");
+                }
+                SetTrayMode("custom", "⚪ 自定义");
+            }
+            else if (_savedMode == "default") { SetTrayMode("default", "默认"); }
         }
 
         private void ShowWindow()
