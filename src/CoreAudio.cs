@@ -29,6 +29,8 @@ namespace GenshinTweak
         public string AppName;     // exe name of the foreground application
         public float Volume;       // 0.0 .. 1.0
         public bool Muted;
+        public int SessionCount;   // audio sessions controlled by this operation
+        public bool UsedPreviousApp; // our own window was focused -> last other app
         public string Error;       // null when Ok
     }
 
@@ -192,6 +194,7 @@ namespace GenshinTweak
             st.AppName = "";
             st.Volume = 0f;
             st.Muted = false;
+            st.SessionCount = 0;
 
             bool mustUninitialize;
             if (!EnterCom(out mustUninitialize))
@@ -204,7 +207,7 @@ namespace GenshinTweak
             try
             {
                 uint pid;
-                st.AppName = ForegroundApp(out pid);
+                st.AppName = ForegroundApp(out pid, out st.UsedPreviousApp);
                 if (pid == 0 || st.AppName.Length == 0)
                 {
                     // no usable foreground window: nothing to control, not an error
@@ -226,43 +229,92 @@ namespace GenshinTweak
                 bool muted = false;
                 Guid context = Guid.Empty;
                 string error = null;
+                st.SessionCount = targets.Count;
 
-                foreach (Session session in targets)
+                if (action == AudioAction.ToggleMute)
                 {
-                    if (action == AudioAction.ToggleMute)
+                    // "mute everything unless everything is already muted".
+                    // Inverting each session separately (the Python original) left
+                    // multi-process apps half muted, which sounds like "mute does
+                    // not work" — e.g. Chrome keeps one renderer audible.
+                    bool anyReadable = false;
+                    bool anyUnmuted = false;
+                    for (int i = 0; i < targets.Count; i++)
                     {
                         bool current;
-                        if (session.Volume.GetMute(out current) != 0) continue;
-                        int hr = session.Volume.SetMute(!current, ref context);
-                        if (hr != 0) { error = "SetMute 0x" + hr.ToString("X8"); continue; }
-                        muted = !current;
-                        session.Volume.GetMasterVolume(out volume);
+                        if (targets[i].Volume.GetMute(out current) != 0) continue;
+                        anyReadable = true;
+                        if (!current) anyUnmuted = true;
                     }
-                    else if (action == AudioAction.Adjust)
+                    bool desired = !anyReadable || anyUnmuted;
+
+                    for (int i = 0; i < targets.Count; i++)
                     {
-                        float current;
-                        if (session.Volume.GetMasterVolume(out current) != 0) continue;
-                        float next = current + delta;
+                        int hr = targets[i].Volume.SetMute(desired, ref context);
+                        if (hr != 0) error = "SetMute 0x" + hr.ToString("X8");
+                    }
+
+                    // read back so the HUD shows the real state
+                    muted = desired;
+                    bool readAny = false;
+                    bool allMuted = true;
+                    for (int i = 0; i < targets.Count; i++)
+                    {
+                        bool current;
+                        if (targets[i].Volume.GetMute(out current) != 0) continue;
+                        readAny = true;
+                        if (!current) allMuted = false;
+                        float v;
+                        if (targets[i].Volume.GetMasterVolume(out v) == 0 && v > volume) volume = v;
+                    }
+                    if (readAny) muted = allMuted;
+                }
+                else
+                {
+                    // adjust / query: the loudest session is the reference, so all
+                    // processes of a multi-process app end up in sync
+                    float current = -1f;
+                    for (int i = 0; i < targets.Count; i++)
+                    {
+                        float v;
+                        if (targets[i].Volume.GetMasterVolume(out v) != 0) continue;
+                        if (v > current) current = v;
+                    }
+                    if (current < 0f) current = 0f;
+
+                    float next = current;
+                    if (action == AudioAction.Adjust)
+                    {
+                        next = current + delta;
                         if (next < 0f) next = 0f;
                         if (next > 1f) next = 1f;
-                        int hr = session.Volume.SetMasterVolume(next, ref context);
-                        if (hr != 0) { error = "SetMasterVolume 0x" + hr.ToString("X8"); continue; }
 
-                        // same as the Python original: raising volume un-mutes
-                        if (delta > 0f)
+                        for (int i = 0; i < targets.Count; i++)
                         {
-                            bool isMuted;
-                            if (session.Volume.GetMute(out isMuted) == 0 && isMuted)
-                                session.Volume.SetMute(false, ref context);
+                            int hr = targets[i].Volume.SetMasterVolume(next, ref context);
+                            if (hr != 0) { error = "SetMasterVolume 0x" + hr.ToString("X8"); continue; }
+
+                            // same as the Python original: raising volume un-mutes
+                            if (delta > 0f)
+                            {
+                                bool isMuted;
+                                if (targets[i].Volume.GetMute(out isMuted) == 0 && isMuted)
+                                    targets[i].Volume.SetMute(false, ref context);
+                            }
                         }
-                        volume = next;
-                        session.Volume.GetMute(out muted);
                     }
-                    else
+
+                    volume = next;
+                    muted = true;
+                    bool readAny = false;
+                    for (int i = 0; i < targets.Count; i++)
                     {
-                        if (session.Volume.GetMasterVolume(out volume) != 0) continue;
-                        session.Volume.GetMute(out muted);
+                        bool m;
+                        if (targets[i].Volume.GetMute(out m) != 0) continue;
+                        readAny = true;
+                        if (!m) muted = false;
                     }
+                    if (!readAny) muted = false;
                 }
 
                 st.Volume = volume;
@@ -304,13 +356,62 @@ namespace GenshinTweak
             catch { }
         }
 
-        private static string ForegroundApp(out uint pid)
+        // Last foreground app that was not this tool. When the user clicks the
+        // tool window and presses the hotkey, that app is still what they mean.
+        private static readonly object LastAppLock = new object();
+        private static uint _lastAppPid;
+        private static string _lastAppName = "";
+        private static DateTime _lastAppAt = DateTime.MinValue;
+        private static int _selfPid = -1;
+
+        private static int SelfPid
         {
+            get
+            {
+                if (_selfPid < 0)
+                {
+                    try
+                    {
+                        using (Process self = Process.GetCurrentProcess()) _selfPid = self.Id;
+                    }
+                    catch { _selfPid = 0; }
+                }
+                return _selfPid;
+            }
+        }
+
+        private static string ForegroundApp(out uint pid, out bool usedPrevious)
+        {
+            usedPrevious = false;
             pid = 0;
             IntPtr hwnd = GetForegroundWindow();
             if (hwnd == IntPtr.Zero) return "";
             GetWindowThreadProcessId(hwnd, out pid);
-            return ProcessNameOf(pid);
+            string name = ProcessNameOf(pid);
+            if (pid == 0) return name;
+
+            if (pid != (uint)SelfPid)
+            {
+                lock (LastAppLock)
+                {
+                    _lastAppPid = pid;
+                    _lastAppName = name;
+                    _lastAppAt = DateTime.Now;
+                }
+                return name;
+            }
+
+            lock (LastAppLock)
+            {
+                // 10 minutes is enough for "I just left that window"
+                if (_lastAppPid != 0 && (DateTime.Now - _lastAppAt).TotalMinutes <= 10.0)
+                {
+                    pid = _lastAppPid;
+                    usedPrevious = true;
+                    return _lastAppName;
+                }
+            }
+            return name;
         }
 
         private static string ProcessNameOf(uint pid)

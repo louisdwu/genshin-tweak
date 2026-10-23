@@ -759,7 +759,8 @@ namespace GenshinTweak
             VolumeKeys.Step = VolumeStep;
             VolumeKeys.Mute = VolumeMute;
             if (!VolumeKeys.Install())
-                AppendLog("[WARN] 全局键盘钩子安装失败，音量热键与热键修改不可用（其余功能不受影响）");
+                AppendLog("[WARN] 全局键盘钩子安装失败 (Win32 错误码 " + VolumeKeys.LastHookError
+                    + ")，音量热键与热键修改不可用（其余功能不受影响）");
             ApplyVolumeSettings(false);
             UpdateVolumeLabel(CoreAudio.QueryForeground());
 
@@ -1147,12 +1148,11 @@ namespace GenshinTweak
             VolumeKeys.Enabled = _volEnabled.Checked;
             _volStepPct = (int)_volStep.Value;
 
-            if (!save) return;
-
-            AppendLog(string.Format("{0} 音量热键: 静音 [{1}] · 音量- [{2}] · 音量+ [{3}] · 步进 {4}%",
+            AppendLog(string.Format("{0} 音量热键: 静音 [{1}] · 音量- [{2}] · 音量+ [{3}] · 步进 {4}% · {5}",
                 _volEnabled.Checked ? "[OK]" : "[--]",
-                KeyText(mute), KeyText(down), KeyText(up), _volStepPct));
-            SaveWindowState();
+                KeyText(mute), KeyText(down), KeyText(up), _volStepPct,
+                VolumeKeys.IsHooked ? "钩子已安装" : "钩子不可用"));
+            if (save) SaveWindowState();
         }
 
         private static string KeyText(Hotkey h)
@@ -1179,9 +1179,17 @@ namespace GenshinTweak
             {
                 PowerControl.Logger("[ERR] 静音切换失败: " + (st.Error == null ? "未知错误" : st.Error));
             }
-            else if (st.HasAudio)
+            else if (!st.HasAudio)
             {
-                PowerControl.LogEvent("volume", st.AppName + (st.Muted ? " muted" : " unmuted"));
+                PowerControl.Logger("[WARN] " + (st.AppName.Length > 0 ? st.AppName : "前台窗口")
+                    + " 没有可控制的音频会话（前台窗口不是在放声音的程序？）");
+            }
+            else
+            {
+                PowerControl.Logger("[OK] " + (st.UsedPreviousApp ? "(上次) " : "") + st.AppName + " · "
+                    + st.SessionCount + " 个音频会话 → " + (st.Muted ? "已静音" : "已取消静音"));
+                PowerControl.LogEvent("volume", st.AppName + (st.Muted ? " muted" : " unmuted")
+                    + " sessions=" + st.SessionCount);
             }
             UpdateVolumeLabel(st);
             VolumeHud.Show(st);
@@ -1204,20 +1212,21 @@ namespace GenshinTweak
             }
 
             string app = st.AppName.Length > 0 ? st.AppName : "(无前台窗口)";
+            string prefix = st.UsedPreviousApp ? "上次: " : "前台: ";
             if (!st.HasAudio)
             {
-                _volStatus.Text = "前台: " + app + " · 无音频会话";
+                _volStatus.Text = prefix + app + " · 无音频会话";
                 _volStatus.ForeColor = Color.Gray;
             }
             else if (st.Muted)
             {
-                _volStatus.Text = "前台: " + app + " · 已静音";
+                _volStatus.Text = prefix + app + " · 已静音";
                 _volStatus.ForeColor = WarnColor();
             }
             else
             {
                 int pct = (int)Math.Round(st.Volume * 100f);
-                _volStatus.Text = "前台: " + app + " · " + pct + "%";
+                _volStatus.Text = prefix + app + " · " + pct + "%";
                 _volStatus.ForeColor = OkColor();
             }
         }

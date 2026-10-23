@@ -209,6 +209,8 @@ namespace GenshinTweak
         private static int _repeatDir;
         private static readonly object _repeatSync = new object();
 
+        private static DateTime _lastMuteAt = DateTime.MinValue;
+
         public static bool Enabled
         {
             get { return _enabled; }
@@ -219,6 +221,13 @@ namespace GenshinTweak
         {
             get { return _capture != null; }
         }
+
+        public static bool IsHooked
+        {
+            get { return _hook != IntPtr.Zero; }
+        }
+
+        public static int LastHookError { get; private set; }
 
         public static void Attach(Control ui)
         {
@@ -239,6 +248,7 @@ namespace GenshinTweak
             _pressed.Clear();
             _swallowed.Clear();
             _hookProc = new LowLevelKeyboardProc(HookCallback);
+            int error = 0;
             try
             {
                 using (Process current = Process.GetCurrentProcess())
@@ -246,13 +256,20 @@ namespace GenshinTweak
                 {
                     _hook = SetWindowsHookEx(WH_KEYBOARD_LL, _hookProc,
                         GetModuleHandle(module.ModuleName), 0);
+                    // grab the error right away: disposing the Process below
+                    // would overwrite the thread's last error
+                    if (_hook == IntPtr.Zero) error = Marshal.GetLastWin32Error();
                 }
             }
             catch
             {
                 _hook = IntPtr.Zero;
             }
-            if (_hook == IntPtr.Zero) _hookProc = null;
+            if (_hook == IntPtr.Zero)
+            {
+                LastHookError = error;
+                _hookProc = null;
+            }
             return _hook != IntPtr.Zero;
         }
 
@@ -331,10 +348,26 @@ namespace GenshinTweak
             if (!hitMute && !hitUp && !hitDown) return false;
 
             _swallowed.Add(vk);
-            if (!fresh) return true;                 // auto-repeat: keep swallowing only
 
-            if (hitMute) PostMute();
-            else if (hitUp) StartRepeat(1);
+            if (hitMute)
+            {
+                // Two guards for single-shot keys like Pause:
+                //  - debounce duplicated key-down events of one physical press
+                //  - still accept a new press when its key-up never arrived
+                //    (the Pause key does not always report a key-up)
+                DateTime now = DateTime.Now;
+                double since = (now - _lastMuteAt).TotalMilliseconds;
+                bool accept = fresh ? since >= 200 : since >= 900;
+                if (accept)
+                {
+                    _lastMuteAt = now;
+                    PostMute();
+                }
+                return true;
+            }
+
+            if (!fresh) return true;                 // auto-repeat: keep swallowing only
+            if (hitUp) StartRepeat(1);
             else if (hitDown) StartRepeat(-1);
             return true;
         }
