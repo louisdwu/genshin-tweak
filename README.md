@@ -121,7 +121,7 @@ voldown=Ctrl+Alt+Down
 
 | 原实现 | 现实现 |
 |--------|--------|
-| pycaw（`IAudioSessionManager2` / `ISimpleAudioVolume`） | `src/CoreAudio.cs` 手写 COM 互操作，零第三方库 |
+| pycaw（`IAudioSessionManager2` / `ISimpleAudioVolume`） | `src/CoreAudio.cs` 手写 COM 互操作，零第三方库；会话枚举走**裸 vtable 槽位**（实测 `ComImport` 接口继承在真机上会错位到相邻方法，`GetSessionEnumerator` 直接 E_POINTER） |
 | pynput 全局监听 + 线程连发 | `src/VolumeKeys.cs` `WH_KEYBOARD_LL` 钩子 + 连发线程（0.25s 延迟 / 50ms 间隔） |
 | Tkinter OSD 窗口 | `src/VolumeHud.cs` 双缓冲原位绘制，无闪烁、不抢焦点、点击穿透 |
 | psutil 取前台进程 | `GetForegroundWindow` + `GetWindowThreadProcessId` + `Process` |

@@ -6,8 +6,15 @@
 //   - toggle its mute state
 //   - group multi-process apps (Chrome, Electron, ...) by process name
 //
-// Pure COM interop against %WINDIR%\System32\Windows.Media.Devices style
-// interfaces: no NuGet package, no Python, no external DLL. csc.exe can build
+// IMPORTANT: the session graph is driven through raw vtable calls instead of
+// ComImport interfaces. A derived ComImport interface (IAudioSessionManager2 :
+// IAudioSessionManager) did not resolve to the native vtable slots on a real
+// Windows box — GetSessionEnumerator landed on the neighbouring method and the
+// audio service answered E_POINTER (0x80004003), so no session was ever found.
+// Indexing the vtable ourselves (slot 3 = GetAudioSessionControl, 5 =
+// GetSessionEnumerator, ...) removes the CLR interface-mapping question.
+//
+// Pure interop: no NuGet package, no Python, no external DLL. csc.exe can build
 // it straight from source.
 //
 // C# 5 ONLY (csc.exe 4.0.30319) — no $"", no ?., no nameof, no expression
@@ -61,8 +68,9 @@ namespace GenshinTweak
         private const uint COINIT_APARTMENTTHREADED = 0x2;
         private const int RPC_E_CHANGED_MODE = unchecked((int)0x80010106);
         private const uint CLSCTX_ALL = 23;
+        private const int DEVICE_STATE_ACTIVE = 0x1;
 
-        // ---- COM interop -------------------------------------------------
+        // ---- device enumerator (plain RCW; these calls are vtable-stable) --
         [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
         private class MMDeviceEnumeratorComObject
         {
@@ -91,88 +99,93 @@ namespace GenshinTweak
          InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
         private interface IMMDevice
         {
-            [PreserveSig] int Activate(ref Guid iid, uint dwClsCtx, IntPtr pActivationParams,
-                [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
+            // raw IUnknown** out; the returned pointer's vtable belongs to
+            // IAudioSessionManager2 (the IID we ask for), so we index it by hand
+            [PreserveSig] int Activate(ref Guid iid, uint dwClsCtx, IntPtr pActivationParams, out IntPtr ppInterface);
             [PreserveSig] int OpenPropertyStore(uint stgmAccess, out IntPtr properties);
             [PreserveSig] int GetId(out IntPtr id);
             [PreserveSig] int GetState(out uint state);
         }
 
-        [ComImport, Guid("BFA971F1-4D5E-40BB-935E-967039BFBEE4"),
-         InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IAudioSessionManager
+        // ---- raw Core Audio vtables ---------------------------------------
+        private static readonly Guid IID_IAudioSessionManager2 = new Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F");
+        private static readonly Guid IID_IAudioSessionControl2 = new Guid("BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D");
+        private static readonly Guid IID_ISimpleAudioVolume = new Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8");
+
+        // IUnknown occupies slots 0..2 in every COM vtable
+        private const int SLOT_GET_SESSION_ENUMERATOR = 5;   // IAudioSessionManager2 (3,4 = v1 methods)
+        private const int SLOT_GET_COUNT = 3;                // IAudioSessionEnumerator
+        private const int SLOT_GET_SESSION = 4;              // IAudioSessionEnumerator
+        private const int SLOT_SET_MASTER_VOLUME = 3;        // ISimpleAudioVolume
+        private const int SLOT_GET_MASTER_VOLUME = 4;
+        private const int SLOT_SET_MUTE = 5;
+        private const int SLOT_GET_MUTE = 6;
+        private const int SLOT_GET_PROCESS_ID = 14;          // IAudioSessionControl2 (3..11 = control v1)
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnGetSessionEnumerator(IntPtr self, out IntPtr sessionEnum);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnGetCount(IntPtr self, out int count);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnGetSession(IntPtr self, int index, out IntPtr control);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnGetProcessId(IntPtr self, out uint processId);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnSetMasterVolume(IntPtr self, float level, ref Guid eventContext);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnGetMasterVolume(IntPtr self, out float level);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnSetMute(IntPtr self, [MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid eventContext);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int FnGetMute(IntPtr self, [MarshalAs(UnmanagedType.Bool)] out bool mute);
+
+        private static IntPtr VtableSlot(IntPtr unknown, int slot)
         {
-            [PreserveSig] int GetAudioSessionControl(ref Guid audioSessionGuid, uint streamFlags,
-                out IAudioSessionControl sessionControl);
-            [PreserveSig] int GetSimpleAudioVolume(ref Guid audioSessionGuid, uint streamFlags,
-                out ISimpleAudioVolume audioVolume);
+            IntPtr vtable = Marshal.ReadIntPtr(unknown);
+            return Marshal.ReadIntPtr(vtable, slot * IntPtr.Size);
         }
 
-        [ComImport, Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F"),
-         InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IAudioSessionManager2 : IAudioSessionManager
+        private static T Fn<T>(IntPtr unknown, int slot) where T : class
         {
-            [PreserveSig] int GetSessionEnumerator(out IAudioSessionEnumerator sessionEnum);
-            [PreserveSig] int RegisterSessionNotification(IntPtr sessionNotification);
-            [PreserveSig] int UnregisterSessionNotification(IntPtr sessionNotification);
-            [PreserveSig] int RegisterDuckNotification([MarshalAs(UnmanagedType.LPWStr)] string sessionId,
-                IntPtr duckNotification);
-            [PreserveSig] int UnregisterDuckNotification(IntPtr duckNotification);
+            return Marshal.GetDelegateForFunctionPointer(VtableSlot(unknown, slot), typeof(T)) as T;
         }
 
-        [ComImport, Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"),
-         InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IAudioSessionEnumerator
-        {
-            [PreserveSig] int GetCount(out int sessionCount);
-            [PreserveSig] int GetSession(int sessionIndex, out IAudioSessionControl session);
-        }
-
-        [ComImport, Guid("F4B1A599-7266-4319-A8CA-E70ACB11E8CD"),
-         InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IAudioSessionControl
-        {
-            // vtable order matters — never call these, but they must be listed
-            [PreserveSig] int GetState(out int state);
-            [PreserveSig] int GetDisplayName(out IntPtr name);
-            [PreserveSig] int SetDisplayName([MarshalAs(UnmanagedType.LPWStr)] string name, ref Guid eventContext);
-            [PreserveSig] int GetIconPath(out IntPtr path);
-            [PreserveSig] int SetIconPath([MarshalAs(UnmanagedType.LPWStr)] string path, ref Guid eventContext);
-            [PreserveSig] int GetGroupingParam(out Guid groupingParam);
-            [PreserveSig] int SetGroupingParam(ref Guid groupingParam, ref Guid eventContext);
-            [PreserveSig] int RegisterAudioSessionNotification(IntPtr newNotifications);
-            [PreserveSig] int UnregisterAudioSessionNotification(IntPtr newNotifications);
-        }
-
-        [ComImport, Guid("BFB7FF88-7239-4FC9-8FA2-07C950BE9C6D"),
-         InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface IAudioSessionControl2 : IAudioSessionControl
-        {
-            [PreserveSig] int GetSessionIdentifier(out IntPtr id);
-            [PreserveSig] int GetSessionInstanceIdentifier(out IntPtr id);
-            [PreserveSig] int GetProcessId(out uint processId);
-            [PreserveSig] int IsSystemSoundsSession();
-            [PreserveSig] int SetDuckingPreference([MarshalAs(UnmanagedType.Bool)] bool optOut);
-        }
-
-        [ComImport, Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8"),
-         InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-        private interface ISimpleAudioVolume
-        {
-            [PreserveSig] int SetMasterVolume(float level, ref Guid eventContext);
-            [PreserveSig] int GetMasterVolume(out float level);
-            [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid eventContext);
-            [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
-        }
-
-        // One audio session owned by a process (RCW for the session control).
+        // ---- session facade -------------------------------------------------
         private struct Session
         {
-            public IAudioSessionControl Control;     // released through this
-            public IAudioSessionControl2 Control2;   // QueryInterface result
-            public ISimpleAudioVolume Volume;        // QueryInterface result
+            public IntPtr Control;   // IAudioSessionControl2*
+            public IntPtr Volume;    // ISimpleAudioVolume*
             public uint Pid;
             public string ProcessName;
+        }
+
+        private static int SessionGetMute(IntPtr volume, out bool muted)
+        {
+            return Fn<FnGetMute>(volume, SLOT_GET_MUTE)(volume, out muted);
+        }
+
+        private static int SessionSetMute(IntPtr volume, bool mute)
+        {
+            Guid context = Guid.Empty;
+            return Fn<FnSetMute>(volume, SLOT_SET_MUTE)(volume, mute, ref context);
+        }
+
+        private static int SessionGetVolume(IntPtr volume, out float level)
+        {
+            return Fn<FnGetMasterVolume>(volume, SLOT_GET_MASTER_VOLUME)(volume, out level);
+        }
+
+        private static int SessionSetVolume(IntPtr volume, float level)
+        {
+            Guid context = Guid.Empty;
+            return Fn<FnSetMasterVolume>(volume, SLOT_SET_MASTER_VOLUME)(volume, level, ref context);
         }
 
         // ====================================================================
@@ -207,8 +220,20 @@ namespace GenshinTweak
             }
             finally
             {
-                for (int i = 0; i < sessions.Count; i++) Release(sessions[i].Control);
+                ReleaseSessions(sessions);
                 if (mustUninitialize) CoUninitialize();
+            }
+        }
+
+        // Diagnostics of the last enumeration (devices, raw sessions, failure)
+        public static string LastEnumSummary
+        {
+            get
+            {
+                string s = "输出设备 " + _lastDeviceCount + " 个 · 音频会话 "
+                    + _lastRawSessionCount + " 个（含系统声音）";
+                if (_lastEnumError != null) s += " · " + _lastEnumError;
+                return s;
             }
         }
 
@@ -257,22 +282,20 @@ namespace GenshinTweak
 
                 float volume = 0f;
                 bool muted = false;
-                Guid context = Guid.Empty;
                 string error = null;
                 st.SessionCount = targets.Count;
 
                 if (action == AudioAction.ToggleMute)
                 {
                     // "mute everything unless everything is already muted".
-                    // Inverting each session separately (the Python original) left
-                    // multi-process apps half muted, which sounds like "mute does
-                    // not work" — e.g. Chrome keeps one renderer audible.
+                    // Inverting each session separately left multi-process apps
+                    // half muted, which sounds like "mute does not work".
                     bool anyReadable = false;
                     bool anyUnmuted = false;
                     for (int i = 0; i < targets.Count; i++)
                     {
                         bool current;
-                        if (targets[i].Volume.GetMute(out current) != 0) continue;
+                        if (SessionGetMute(targets[i].Volume, out current) != 0) continue;
                         anyReadable = true;
                         if (!current) anyUnmuted = true;
                     }
@@ -280,7 +303,7 @@ namespace GenshinTweak
 
                     for (int i = 0; i < targets.Count; i++)
                     {
-                        int hr = targets[i].Volume.SetMute(desired, ref context);
+                        int hr = SessionSetMute(targets[i].Volume, desired);
                         if (hr != 0) error = "SetMute 0x" + hr.ToString("X8");
                     }
 
@@ -291,11 +314,11 @@ namespace GenshinTweak
                     for (int i = 0; i < targets.Count; i++)
                     {
                         bool current;
-                        if (targets[i].Volume.GetMute(out current) != 0) continue;
+                        if (SessionGetMute(targets[i].Volume, out current) != 0) continue;
                         readAny = true;
                         if (!current) allMuted = false;
                         float v;
-                        if (targets[i].Volume.GetMasterVolume(out v) == 0 && v > volume) volume = v;
+                        if (SessionGetVolume(targets[i].Volume, out v) == 0 && v > volume) volume = v;
                     }
                     if (readAny) muted = allMuted;
                 }
@@ -307,7 +330,7 @@ namespace GenshinTweak
                     for (int i = 0; i < targets.Count; i++)
                     {
                         float v;
-                        if (targets[i].Volume.GetMasterVolume(out v) != 0) continue;
+                        if (SessionGetVolume(targets[i].Volume, out v) != 0) continue;
                         if (v > current) current = v;
                     }
                     if (current < 0f) current = 0f;
@@ -321,15 +344,15 @@ namespace GenshinTweak
 
                         for (int i = 0; i < targets.Count; i++)
                         {
-                            int hr = targets[i].Volume.SetMasterVolume(next, ref context);
+                            int hr = SessionSetVolume(targets[i].Volume, next);
                             if (hr != 0) { error = "SetMasterVolume 0x" + hr.ToString("X8"); continue; }
 
                             // same as the Python original: raising volume un-mutes
                             if (delta > 0f)
                             {
                                 bool isMuted;
-                                if (targets[i].Volume.GetMute(out isMuted) == 0 && isMuted)
-                                    targets[i].Volume.SetMute(false, ref context);
+                                if (SessionGetMute(targets[i].Volume, out isMuted) == 0 && isMuted)
+                                    SessionSetMute(targets[i].Volume, false);
                             }
                         }
                     }
@@ -340,7 +363,7 @@ namespace GenshinTweak
                     for (int i = 0; i < targets.Count; i++)
                     {
                         bool m;
-                        if (targets[i].Volume.GetMute(out m) != 0) continue;
+                        if (SessionGetMute(targets[i].Volume, out m) != 0) continue;
                         readAny = true;
                         if (!m) muted = false;
                     }
@@ -360,10 +383,23 @@ namespace GenshinTweak
             }
             finally
             {
-                for (int i = 0; i < sessions.Count; i++) Release(sessions[i].Control);
+                ReleaseSessions(sessions);
                 if (mustUninitialize) CoUninitialize();
             }
             return st;
+        }
+
+        private static void ReleaseSessions(List<Session> sessions)
+        {
+            for (int i = 0; i < sessions.Count; i++)
+            {
+                try
+                {
+                    if (sessions[i].Control != IntPtr.Zero) Marshal.Release(sessions[i].Control);
+                    if (sessions[i].Volume != IntPtr.Zero) Marshal.Release(sessions[i].Volume);
+                }
+                catch { }
+            }
         }
 
         private static bool EnterCom(out bool mustUninitialize)
@@ -400,21 +436,6 @@ namespace GenshinTweak
         private static string _lastAppName = "";
         private static DateTime _lastAppAt = DateTime.MinValue;
         private static int _selfPid = -1;
-
-        private static int _lastDeviceCount;
-        private static int _lastRawSessionCount;
-        private static string _lastEnumError;
-
-        public static string LastEnumSummary
-        {
-            get
-            {
-                string s = "输出设备 " + _lastDeviceCount + " 个 · 音频会话 "
-                    + _lastRawSessionCount + " 个（含系统声音）";
-                if (_lastEnumError != null) s += " · " + _lastEnumError;
-                return s;
-            }
-        }
 
         private static int SelfPid
         {
@@ -482,11 +503,14 @@ namespace GenshinTweak
             catch { return ""; }
         }
 
+        // ---- enumeration ----------------------------------------------------
+        private static int _lastDeviceCount;
+        private static int _lastRawSessionCount;
+        private static string _lastEnumError;
+
         // Every active render endpoint -> session manager -> every session.
         // Games often pick a non-default output device (headset vs HDMI), and
-        // WASAPI keeps sessions per endpoint, so only looking at the default
-        // endpoint reports "no audio session" for them.
-        // Session controls that end up in `output` are owned by the caller.
+        // WASAPI keeps sessions per endpoint.
         private static void EnumerateSessions(List<Session> output)
         {
             _lastDeviceCount = 0;
@@ -500,7 +524,7 @@ namespace GenshinTweak
                 deviceEnumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
 
                 // eRender = 0, DEVICE_STATE_ACTIVE = 0x1
-                int hr = deviceEnumerator.EnumAudioEndpoints(0, 1, out devices);
+                int hr = deviceEnumerator.EnumAudioEndpoints(0, DEVICE_STATE_ACTIVE, out devices);
                 if (hr != 0 || devices == null)
                 {
                     _lastEnumError = "EnumAudioEndpoints 失败 0x" + hr.ToString("X8");
@@ -544,29 +568,27 @@ namespace GenshinTweak
 
         private static void EnumerateDeviceSessions(IMMDevice device, List<Session> output)
         {
-            IAudioSessionManager2 manager = null;
-            IAudioSessionEnumerator enumerator = null;
+            IntPtr manager = IntPtr.Zero;
+            IntPtr enumerator = IntPtr.Zero;
             try
             {
-                Guid iid = typeof(IAudioSessionManager2).GUID;
-                object activated;
-                int hr = device.Activate(ref iid, CLSCTX_ALL, IntPtr.Zero, out activated);
-                if (hr != 0 || activated == null)
+                Guid iid = IID_IAudioSessionManager2;
+                int hr = device.Activate(ref iid, CLSCTX_ALL, IntPtr.Zero, out manager);
+                if (hr != 0 || manager == IntPtr.Zero)
                 {
                     if (_lastEnumError == null) _lastEnumError = "Activate 失败 0x" + hr.ToString("X8");
                     return;
                 }
-                manager = (IAudioSessionManager2)activated;
 
-                hr = manager.GetSessionEnumerator(out enumerator);
-                if (hr != 0 || enumerator == null)
+                hr = Fn<FnGetSessionEnumerator>(manager, SLOT_GET_SESSION_ENUMERATOR)(manager, out enumerator);
+                if (hr != 0 || enumerator == IntPtr.Zero)
                 {
                     if (_lastEnumError == null) _lastEnumError = "GetSessionEnumerator 失败 0x" + hr.ToString("X8");
                     return;
                 }
 
                 int count;
-                hr = enumerator.GetCount(out count);
+                hr = Fn<FnGetCount>(enumerator, SLOT_GET_COUNT)(enumerator, out count);
                 if (hr != 0)
                 {
                     if (_lastEnumError == null) _lastEnumError = "会话计数失败 0x" + hr.ToString("X8");
@@ -575,29 +597,41 @@ namespace GenshinTweak
 
                 for (int i = 0; i < count; i++)
                 {
-                    IAudioSessionControl control;
-                    if (enumerator.GetSession(i, out control) != 0 || control == null) continue;
+                    IntPtr control;
+                    if (Fn<FnGetSession>(enumerator, SLOT_GET_SESSION)(enumerator, i, out control) != 0
+                        || control == IntPtr.Zero) continue;
                     _lastRawSessionCount++;      // includes system sounds
 
-                    // casting an RCW performs QueryInterface
-                    IAudioSessionControl2 control2 = control as IAudioSessionControl2;
-                    ISimpleAudioVolume volume = control as ISimpleAudioVolume;
-                    if (control2 == null || volume == null)
+                    IntPtr control2;
+                    Guid iidControl2 = IID_IAudioSessionControl2;
+                    if (Marshal.QueryInterface(control, ref iidControl2, out control2) != 0
+                        || control2 == IntPtr.Zero)
                     {
-                        Release(control);
+                        Marshal.Release(control);
                         continue;
                     }
 
                     uint pid;
-                    if (control2.GetProcessId(out pid) != 0 || pid == 0)
+                    if (Fn<FnGetProcessId>(control2, SLOT_GET_PROCESS_ID)(control2, out pid) != 0 || pid == 0)
                     {
-                        Release(control);      // system sounds / stale session
+                        Marshal.Release(control2);      // system sounds / stale session
+                        Marshal.Release(control);
                         continue;
                     }
 
+                    IntPtr volume;
+                    Guid iidVolume = IID_ISimpleAudioVolume;
+                    if (Marshal.QueryInterface(control, ref iidVolume, out volume) != 0
+                        || volume == IntPtr.Zero)
+                    {
+                        Marshal.Release(control2);
+                        Marshal.Release(control);
+                        continue;
+                    }
+                    Marshal.Release(control);            // control2 + volume hold their own refs
+
                     Session session = new Session();
-                    session.Control = control;
-                    session.Control2 = control2;
+                    session.Control = control2;
                     session.Volume = volume;
                     session.Pid = pid;
                     // an empty name is fine: matching by PID still works, and
@@ -612,8 +646,8 @@ namespace GenshinTweak
             }
             finally
             {
-                Release(enumerator);
-                Release(manager);
+                if (enumerator != IntPtr.Zero) { try { Marshal.Release(enumerator); } catch { } }
+                if (manager != IntPtr.Zero) { try { Marshal.Release(manager); } catch { } }
             }
         }
 
