@@ -193,6 +193,25 @@ namespace GenshinTweak
             return Run(AudioAction.Query, 0f);
         }
 
+        // One-shot diagnostic used at startup: enumerate everything and describe it.
+        public static string ProbeAudio()
+        {
+            bool mustUninitialize;
+            if (!EnterCom(out mustUninitialize)) return "COM 初始化失败";
+
+            List<Session> sessions = new List<Session>();
+            try
+            {
+                EnumerateSessions(sessions);
+                return DescribeSessions(sessions);
+            }
+            finally
+            {
+                for (int i = 0; i < sessions.Count; i++) Release(sessions[i].Control);
+                if (mustUninitialize) CoUninitialize();
+            }
+        }
+
         // ====================================================================
         // internals
         // ====================================================================
@@ -350,11 +369,18 @@ namespace GenshinTweak
         private static bool EnterCom(out bool mustUninitialize)
         {
             mustUninitialize = false;
-            int hr = CoInitializeEx(IntPtr.Zero, COINIT_APARTMENTTHREADED);
-            if (hr == RPC_E_CHANGED_MODE) return true;   // already in an MTA: usable as-is
-            if (hr < 0) return false;
-            mustUninitialize = true;                     // S_OK / S_FALSE: balanced below
-            return true;
+            try
+            {
+                int hr = CoInitializeEx(IntPtr.Zero, COINIT_APARTMENTTHREADED);
+                if (hr == RPC_E_CHANGED_MODE) return true;   // already in an MTA: usable as-is
+                if (hr < 0) return false;
+                mustUninitialize = true;                     // S_OK / S_FALSE: balanced below
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static void Release(object com)
@@ -374,6 +400,21 @@ namespace GenshinTweak
         private static string _lastAppName = "";
         private static DateTime _lastAppAt = DateTime.MinValue;
         private static int _selfPid = -1;
+
+        private static int _lastDeviceCount;
+        private static int _lastRawSessionCount;
+        private static string _lastEnumError;
+
+        public static string LastEnumSummary
+        {
+            get
+            {
+                string s = "输出设备 " + _lastDeviceCount + " 个 · 音频会话 "
+                    + _lastRawSessionCount + " 个（含系统声音）";
+                if (_lastEnumError != null) s += " · " + _lastEnumError;
+                return s;
+            }
+        }
 
         private static int SelfPid
         {
@@ -448,6 +489,10 @@ namespace GenshinTweak
         // Session controls that end up in `output` are owned by the caller.
         private static void EnumerateSessions(List<Session> output)
         {
+            _lastDeviceCount = 0;
+            _lastRawSessionCount = 0;
+            _lastEnumError = null;
+
             IMMDeviceEnumerator deviceEnumerator = null;
             IMMDeviceCollection devices = null;
             try
@@ -455,11 +500,14 @@ namespace GenshinTweak
                 deviceEnumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
 
                 // eRender = 0, DEVICE_STATE_ACTIVE = 0x1
-                if (deviceEnumerator.EnumAudioEndpoints(0, 1, out devices) != 0 || devices == null)
+                int hr = deviceEnumerator.EnumAudioEndpoints(0, 1, out devices);
+                if (hr != 0 || devices == null)
                 {
+                    _lastEnumError = "EnumAudioEndpoints 失败 0x" + hr.ToString("X8");
                     IMMDevice fallback = null;
                     if (deviceEnumerator.GetDefaultAudioEndpoint(0, 0, out fallback) == 0 && fallback != null)
                     {
+                        _lastDeviceCount = 1;
                         EnumerateDeviceSessions(fallback, output);
                         Release(fallback);
                     }
@@ -467,7 +515,13 @@ namespace GenshinTweak
                 }
 
                 int deviceCount;
-                if (devices.GetCount(out deviceCount) != 0) return;
+                hr = devices.GetCount(out deviceCount);
+                if (hr != 0)
+                {
+                    _lastEnumError = "设备计数失败 0x" + hr.ToString("X8");
+                    return;
+                }
+                _lastDeviceCount = deviceCount;
 
                 for (int i = 0; i < deviceCount; i++)
                 {
@@ -477,7 +531,10 @@ namespace GenshinTweak
                     Release(device);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _lastEnumError = "异常 " + ex.GetType().Name + ": " + ex.Message;
+            }
             finally
             {
                 Release(devices);
@@ -493,20 +550,34 @@ namespace GenshinTweak
             {
                 Guid iid = typeof(IAudioSessionManager2).GUID;
                 object activated;
-                if (device.Activate(ref iid, CLSCTX_ALL, IntPtr.Zero, out activated) != 0 || activated == null)
+                int hr = device.Activate(ref iid, CLSCTX_ALL, IntPtr.Zero, out activated);
+                if (hr != 0 || activated == null)
+                {
+                    if (_lastEnumError == null) _lastEnumError = "Activate 失败 0x" + hr.ToString("X8");
                     return;
+                }
                 manager = (IAudioSessionManager2)activated;
 
-                if (manager.GetSessionEnumerator(out enumerator) != 0 || enumerator == null)
+                hr = manager.GetSessionEnumerator(out enumerator);
+                if (hr != 0 || enumerator == null)
+                {
+                    if (_lastEnumError == null) _lastEnumError = "GetSessionEnumerator 失败 0x" + hr.ToString("X8");
                     return;
+                }
 
                 int count;
-                if (enumerator.GetCount(out count) != 0) return;
+                hr = enumerator.GetCount(out count);
+                if (hr != 0)
+                {
+                    if (_lastEnumError == null) _lastEnumError = "会话计数失败 0x" + hr.ToString("X8");
+                    return;
+                }
 
                 for (int i = 0; i < count; i++)
                 {
                     IAudioSessionControl control;
                     if (enumerator.GetSession(i, out control) != 0 || control == null) continue;
+                    _lastRawSessionCount++;      // includes system sounds
 
                     // casting an RCW performs QueryInterface
                     IAudioSessionControl2 control2 = control as IAudioSessionControl2;
@@ -535,7 +606,10 @@ namespace GenshinTweak
                     output.Add(session);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                if (_lastEnumError == null) _lastEnumError = "异常 " + ex.GetType().Name + ": " + ex.Message;
+            }
             finally
             {
                 Release(enumerator);
@@ -568,7 +642,8 @@ namespace GenshinTweak
         // matched, so a device mismatch / exclusive-mode stream is obvious
         private static string DescribeSessions(List<Session> sessions)
         {
-            if (sessions.Count == 0) return "（系统里没有任何音频会话）";
+            string head = LastEnumSummary;
+            if (sessions.Count == 0) return head + "（没有任何应用音频会话）";
 
             StringBuilder sb = new StringBuilder();
             HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -584,7 +659,7 @@ namespace GenshinTweak
                 shown++;
                 if (shown >= 6) { sb.Append("…"); break; }
             }
-            return sb.Length == 0 ? "（无法读取会话信息）" : sb.ToString();
+            return head + "：" + (sb.Length == 0 ? "（无法读取会话信息）" : sb.ToString());
         }
     }
 }

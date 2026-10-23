@@ -763,6 +763,7 @@ namespace GenshinTweak
                     + ")，音量热键与热键修改不可用（其余功能不受影响）");
             ApplyVolumeSettings(false);
             UpdateVolumeLabel(CoreAudio.QueryForeground());
+            AppendLog("[..] 音频枚举: " + CoreAudio.ProbeAudio());
 
             _volTimer = new Timer();
             _volTimer.Interval = 2000;
