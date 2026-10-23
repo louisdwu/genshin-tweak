@@ -33,8 +33,20 @@ namespace GenshinTweak
         public float Level;
         public bool Warn;
 
+        // The card is painted manually, so everything (size, fonts, bar) has to
+        // be scaled by hand — otherwise a 125%/150% display clips the text.
+        private float _scale = 1f;
+
         public VolumeHudForm()
         {
+            try
+            {
+                // desktop DC: reading DPI must not force this window's handle
+                using (Graphics probe = Graphics.FromHwnd(IntPtr.Zero)) _scale = probe.DpiX / 96f;
+            }
+            catch { }
+            if (_scale <= 0f) _scale = 1f;
+
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             TopMost = true;
@@ -42,7 +54,12 @@ namespace GenshinTweak
             BackColor = BgColor;
             Opacity = 0.94;
             DoubleBuffered = true;
-            ClientSize = new Size(460, 92);
+            ClientSize = new Size((int)Math.Round(460 * _scale), (int)Math.Round(92 * _scale));
+        }
+
+        public float ScaleFactor
+        {
+            get { return _scale; }
         }
 
         protected override bool ShowWithoutActivation
@@ -64,31 +81,34 @@ namespace GenshinTweak
         {
             Graphics g = e.Graphics;
             Color accent = Warn ? WarnColor : OkColor;
+            float s = _scale;
+            int pad = (int)(20 * s);
 
             using (SolidBrush bg = new SolidBrush(BgColor))
             using (SolidBrush accentBrush = new SolidBrush(accent))
             using (SolidBrush trackBrush = new SolidBrush(TrackColor))
-            using (Pen border = new Pen(accent, 2f))
-            using (Font titleFont = new Font("Microsoft YaHei UI", 12F, FontStyle.Bold))
-            using (Font valueFont = new Font("Consolas", 15F, FontStyle.Bold))
+            using (Pen border = new Pen(accent, 2f * s))
+            using (Font titleFont = new Font("Microsoft YaHei UI", 12F * s, FontStyle.Bold))
+            using (Font valueFont = new Font("Consolas", 15F * s, FontStyle.Bold))
             {
                 g.FillRectangle(bg, ClientRectangle);
                 g.DrawRectangle(border, 1, 1, Width - 3, Height - 3);
 
-                Rectangle titleRect = new Rectangle(20, 12, Width - 200, 26);
+                Rectangle titleRect = new Rectangle(pad, (int)(12 * s), Width - (int)(200 * s), (int)(26 * s));
                 TextRenderer.DrawText(g, Headline, titleFont, titleRect, accent,
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
                     TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
 
-                Rectangle valueRect = new Rectangle(Width - 170, 10, 150, 28);
+                Rectangle valueRect = new Rectangle(Width - (int)(170 * s), (int)(10 * s),
+                    (int)(150 * s), (int)(28 * s));
                 TextRenderer.DrawText(g, ValueText, valueFont, valueRect, accent,
                     TextFormatFlags.Right | TextFormatFlags.VerticalCenter |
                     TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
 
-                int barX = 20;
-                int barY = Height - 30;
-                int barW = Width - 40;
-                int barH = 10;
+                int barX = pad;
+                int barY = Height - (int)(30 * s);
+                int barW = Width - (int)(40 * s);
+                int barH = Math.Max(4, (int)(10 * s));
                 g.FillRectangle(trackBrush, barX, barY, barW, barH);
 
                 float level = Level;
@@ -162,7 +182,8 @@ namespace GenshinTweak
                 form.Level = level;
                 form.Warn = warn;
                 Rectangle area = Screen.PrimaryScreen.WorkingArea;
-                form.Location = new Point(area.Left + (area.Width - form.Width) / 2, area.Top + 64);
+                form.Location = new Point(area.Left + (area.Width - form.Width) / 2,
+                    area.Top + (int)(64 * form.ScaleFactor));
                 form.Show();
                 _form = form;
             }

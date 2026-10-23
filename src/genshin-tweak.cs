@@ -1182,7 +1182,9 @@ namespace GenshinTweak
             else if (!st.HasAudio)
             {
                 PowerControl.Logger("[WARN] " + (st.AppName.Length > 0 ? st.AppName : "前台窗口")
-                    + " 没有可控制的音频会话（前台窗口不是在放声音的程序？）");
+                    + " 没有可控制的音频会话；当前有声音的进程: "
+                    + (st.AvailableHint == null ? "未知" : st.AvailableHint)
+                    + "（若它确实在放声音，可能开了独占音频模式）");
             }
             else
             {

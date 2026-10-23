@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace GenshinTweak
 {
@@ -31,6 +32,7 @@ namespace GenshinTweak
         public bool Muted;
         public int SessionCount;   // audio sessions controlled by this operation
         public bool UsedPreviousApp; // our own window was focused -> last other app
+        public string AvailableHint; // when nothing matched: sessions that do exist
         public string Error;       // null when Ok
     }
 
@@ -70,11 +72,19 @@ namespace GenshinTweak
          InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
         private interface IMMDeviceEnumerator
         {
-            [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IntPtr devices);
+            [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection devices);
             [PreserveSig] int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
             [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
             [PreserveSig] int RegisterEndpointNotificationCallback(IntPtr client);
             [PreserveSig] int UnregisterEndpointNotificationCallback(IntPtr client);
+        }
+
+        [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"),
+         InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IMMDeviceCollection
+        {
+            [PreserveSig] int GetCount(out int count);
+            [PreserveSig] int Item(int index, out IMMDevice device);
         }
 
         [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"),
@@ -222,6 +232,7 @@ namespace GenshinTweak
                 {
                     st.Ok = true;               // not an error: app is just silent
                     st.HasAudio = false;
+                    st.AvailableHint = DescribeSessions(sessions);
                     return st;
                 }
 
@@ -430,22 +441,56 @@ namespace GenshinTweak
             catch { return ""; }
         }
 
-        // Default render endpoint -> session manager -> every session.
+        // Every active render endpoint -> session manager -> every session.
+        // Games often pick a non-default output device (headset vs HDMI), and
+        // WASAPI keeps sessions per endpoint, so only looking at the default
+        // endpoint reports "no audio session" for them.
         // Session controls that end up in `output` are owned by the caller.
         private static void EnumerateSessions(List<Session> output)
         {
             IMMDeviceEnumerator deviceEnumerator = null;
-            IMMDevice device = null;
-            IAudioSessionManager2 manager = null;
-            IAudioSessionEnumerator enumerator = null;
+            IMMDeviceCollection devices = null;
             try
             {
                 deviceEnumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
 
-                // eRender = 0, eConsole = 0
-                if (deviceEnumerator.GetDefaultAudioEndpoint(0, 0, out device) != 0 || device == null)
+                // eRender = 0, DEVICE_STATE_ACTIVE = 0x1
+                if (deviceEnumerator.EnumAudioEndpoints(0, 1, out devices) != 0 || devices == null)
+                {
+                    IMMDevice fallback = null;
+                    if (deviceEnumerator.GetDefaultAudioEndpoint(0, 0, out fallback) == 0 && fallback != null)
+                    {
+                        EnumerateDeviceSessions(fallback, output);
+                        Release(fallback);
+                    }
                     return;
+                }
 
+                int deviceCount;
+                if (devices.GetCount(out deviceCount) != 0) return;
+
+                for (int i = 0; i < deviceCount; i++)
+                {
+                    IMMDevice device;
+                    if (devices.Item(i, out device) != 0 || device == null) continue;
+                    EnumerateDeviceSessions(device, output);
+                    Release(device);
+                }
+            }
+            catch { }
+            finally
+            {
+                Release(devices);
+                Release(deviceEnumerator);
+            }
+        }
+
+        private static void EnumerateDeviceSessions(IMMDevice device, List<Session> output)
+        {
+            IAudioSessionManager2 manager = null;
+            IAudioSessionEnumerator enumerator = null;
+            try
+            {
                 Guid iid = typeof(IAudioSessionManager2).GUID;
                 object activated;
                 if (device.Activate(ref iid, CLSCTX_ALL, IntPtr.Zero, out activated) != 0 || activated == null)
@@ -484,12 +529,9 @@ namespace GenshinTweak
                     session.Control2 = control2;
                     session.Volume = volume;
                     session.Pid = pid;
+                    // an empty name is fine: matching by PID still works, and
+                    // protected (anti-cheat) processes may refuse the lookup
                     session.ProcessName = ProcessNameOf(pid);
-                    if (session.ProcessName.Length == 0)
-                    {
-                        Release(control);
-                        continue;
-                    }
                     output.Add(session);
                 }
             }
@@ -498,8 +540,6 @@ namespace GenshinTweak
             {
                 Release(enumerator);
                 Release(manager);
-                Release(device);
-                Release(deviceEnumerator);
             }
         }
 
@@ -522,6 +562,29 @@ namespace GenshinTweak
                 }
             }
             return hit;
+        }
+
+        // "chrome.exe、Spotify.exe、pid 1234…" — shown in the log when nothing
+        // matched, so a device mismatch / exclusive-mode stream is obvious
+        private static string DescribeSessions(List<Session> sessions)
+        {
+            if (sessions.Count == 0) return "（系统里没有任何音频会话）";
+
+            StringBuilder sb = new StringBuilder();
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int shown = 0;
+            for (int i = 0; i < sessions.Count; i++)
+            {
+                string label = sessions[i].ProcessName.Length > 0
+                    ? sessions[i].ProcessName
+                    : "pid " + sessions[i].Pid;
+                if (!seen.Add(label)) continue;
+                if (shown > 0) sb.Append("、");
+                sb.Append(label);
+                shown++;
+                if (shown >= 6) { sb.Append("…"); break; }
+            }
+            return sb.Length == 0 ? "（无法读取会话信息）" : sb.ToString();
         }
     }
 }
