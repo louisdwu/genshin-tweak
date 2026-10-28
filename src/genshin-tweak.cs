@@ -9,6 +9,7 @@
 //   5. CSV event log                   (genshin_tweak_log.csv next to exe)
 //   6. Foreground-app volume + mute    (WASAPI, hotkeys Pause / Ctrl+Alt+Up/Down)
 //      — merged from the "Volume Controller" project, now native C#
+//   7. Power history + chart + export  (genshin_tweak_power.csv, gaps on sleep)
 //
 // Build (on Windows, zero install):
 //   build.bat   ->  uses %WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe
@@ -21,6 +22,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -321,6 +323,11 @@ namespace GenshinTweak
 
         private static int RunCapture(string exe, string args, out string stderr)
         {
+            return RunCapture(exe, args, out stderr, true);
+        }
+
+        private static int RunCapture(string exe, string args, out string stderr, bool logErrors)
+        {
             stderr = "";
             try
             {
@@ -358,7 +365,7 @@ namespace GenshinTweak
             }
             catch (Exception ex)
             {
-                Logger("[ERR] " + exe + " " + args + " -> " + ex.Message);
+                if (logErrors) Logger("[ERR] " + exe + " " + args + " -> " + ex.Message);
                 return -1;
             }
         }
@@ -470,6 +477,62 @@ namespace GenshinTweak
             _lastTotal = t;
             if (dTotal <= 0) return -1;
             return Math.Max(0.0, Math.Min(100.0, 100.0 * (dTotal - dIdle) / dTotal));
+        }
+
+        // ---- GPU live sample (power curve) -----------------------------------
+        // nvidia-smi prints e.g. "123.45, 1725, 61, 47"; values the driver does
+        // not support come back as [N/A] and stay -1 (chart draws no point).
+        public static bool SampleGpu(out double watts, out int clockMhz,
+            out int tempC, out double utilPct)
+        {
+            watts = -1;
+            clockMhz = -1;
+            tempC = -1;
+            utilPct = -1;
+
+            string outp;
+            if (RunCapture("nvidia-smi",
+                "--query-gpu=power.draw,clocks.sm,temperature.gpu,utilization.gpu "
+                + "--format=csv,noheader,nounits", out outp, false) != 0) return false;
+
+            foreach (string raw in outp.Split('\n'))
+            {
+                string line = raw.Trim();
+                if (line.Length == 0) continue;
+                string[] p = line.Split(',');
+                if (p.Length < 4) continue;
+
+                double w = ParseNumber(p[0]);
+                double clk = ParseNumber(p[1]);
+                double tmp = ParseNumber(p[2]);
+                double util = ParseNumber(p[3]);
+                if (w < 0 && clk < 0 && tmp < 0 && util < 0) continue;
+
+                watts = w;
+                clockMhz = clk >= 0 ? (int)Math.Round(clk) : -1;
+                tempC = tmp >= 0 ? (int)Math.Round(tmp) : -1;
+                utilPct = util;
+                return true;
+            }
+            return false;
+        }
+
+        // tolerant: "123.45", "123.45 W", "61 C" -> number; "[N/A]" -> -1
+        private static double ParseNumber(string s)
+        {
+            string t = s.Trim();
+            int end = 0;
+            while (end < t.Length)
+            {
+                char c = t[end];
+                if (char.IsDigit(c) || c == '.' || c == '-' || c == '+') end++;
+                else break;
+            }
+            if (end == 0) return -1;
+            double v;
+            if (double.TryParse(t.Substring(0, end), NumberStyles.Float,
+                CultureInfo.InvariantCulture, out v)) return v;
+            return -1;
         }
 
         // ---- CSV event log ----------------------------------------------------
@@ -681,6 +744,14 @@ namespace GenshinTweak
         private int _savedVolStep = 2;
         private string _savedVolMute, _savedVolUp, _savedVolDown;
 
+        // ---- power history chart ----
+        private PowerChart _chart;
+        private ComboBox _rangeBox;
+        private Label _powerStats;
+        private Timer _powerTimer;
+        private long _powerVersion = -1;
+        private float _uiScale = 1f;
+
         private const string DefaultVolumeMuteKey = "Pause";
         private const string DefaultVolumeUpKey = "Ctrl+Alt+Up";
         private const string DefaultVolumeDownKey = "Ctrl+Alt+Down";
@@ -708,8 +779,9 @@ namespace GenshinTweak
             using (Graphics g = CreateGraphics())
             {
                 float f = g.DpiX / 96f;
-                ClientSize = new Size((int)(640 * f), (int)(800 * f));
-                MinimumSize = new Size((int)(560 * f), (int)(680 * f));
+                _uiScale = f;
+                ClientSize = new Size((int)(700 * f), (int)(980 * f));
+                MinimumSize = new Size((int)(620 * f), (int)(880 * f));
             }
 
             LoadWindowStatePrefs();
@@ -770,7 +842,16 @@ namespace GenshinTweak
             _volTimer.Tick += VolTimerTick;
             _volTimer.Start();
 
+            // ---- power history sampling (GPU via nvidia-smi, CPU via GetSystemTimes) ----
+            _powerTimer = new Timer();
+            _powerTimer.Interval = 1000;
+            _powerTimer.Tick += PowerTimerTick;
+            _powerTimer.Start();
+
             RestoreProfilePrefs();
+            // start sampling only after the preset nvidia-smi calls are done,
+            // so they never contend for the driver at startup
+            PowerHistory.Start();
             PowerControl.LogEvent("start", "app launched");
             AppendLog("[OK] 启动完成。先选预设或拖动滑条，再进游戏按 Alt+` 时停；"
                 + "前台应用音量用 Pause 静音、Ctrl+Alt+↑/↓ 调节。");
@@ -807,17 +888,20 @@ namespace GenshinTweak
             _root.Dock = DockStyle.Fill;
             _root.Padding = new Padding(6);
             _root.ColumnCount = 1;
-            _root.RowCount = 5;
+            _root.RowCount = 6;
             _root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            _root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));          // preset
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));          // custom limits
+            _root.RowStyles.Add(new RowStyle(SizeType.Absolute,
+                (int)(272 * _uiScale)));                                   // power chart
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));          // pause
+            _root.RowStyles.Add(new RowStyle(SizeType.AutoSize));          // volume
+            _root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));     // log
             Controls.Add(_root);
 
             BuildPresetGroup();
             BuildCustomGroup();
+            BuildPowerGroup();
             BuildPauseGroup();
             BuildVolumeGroup();
             BuildLogGroup();
@@ -885,6 +969,79 @@ namespace GenshinTweak
             _root.Controls.Add(g, 0, 1);
         }
 
+        // ====================================================================
+        // power history chart (recording / display / export)
+        // ====================================================================
+        private void BuildPowerGroup()
+        {
+            GroupBox g = NewGroup("功耗曲线 — 休眠/待机期间自动断开，不连成直线");
+            g.AutoSize = false;
+
+            TableLayoutPanel t = new TableLayoutPanel();
+            t.Dock = DockStyle.Fill;
+            t.AutoSize = false;
+            t.ColumnCount = 1;
+            t.RowCount = 3;
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            FlowLayoutPanel bar = new FlowLayoutPanel();
+            bar.Dock = DockStyle.Fill;
+            bar.AutoSize = true;
+            bar.WrapContents = false;
+
+            Label cap = new Label();
+            cap.Text = "时间范围";
+            cap.AutoSize = true;
+            cap.Margin = new Padding(2, 9, 4, 2);
+            bar.Controls.Add(cap);
+
+            _rangeBox = new ComboBox();
+            _rangeBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            _rangeBox.Width = (int)(96 * _uiScale);
+            _rangeBox.Margin = new Padding(0, 6, 14, 2);
+            _rangeBox.Items.Add("10 分钟");
+            _rangeBox.Items.Add("1 小时");
+            _rangeBox.Items.Add("6 小时");
+            _rangeBox.Items.Add("24 小时");
+            _rangeBox.SelectedIndex = 1;
+            bar.Controls.Add(_rangeBox);
+
+            Button btnExport = NewButton("导出 CSV", delegate { ExportPowerCsv(); });
+            btnExport.MinimumSize = new Size(110, 30);
+            btnExport.Margin = new Padding(0, 4, 12, 2);
+            bar.Controls.Add(btnExport);
+
+            Label hint = new Label();
+            hint.Text = "每 3 秒采样 · 数据入 CSV";
+            hint.ForeColor = Color.Gray;
+            hint.AutoSize = true;
+            hint.Margin = new Padding(0, 10, 2, 2);
+            bar.Controls.Add(hint);
+
+            t.Controls.Add(bar, 0, 0);
+
+            _powerStats = new Label();
+            _powerStats.Text = "暂无采样数据";
+            _powerStats.ForeColor = Color.Gray;
+            _powerStats.AutoSize = true;
+            _powerStats.Margin = new Padding(4, 0, 2, 4);
+            t.Controls.Add(_powerStats, 0, 1);
+
+            _chart = new PowerChart();
+            _chart.Dock = DockStyle.Fill;
+            _chart.Margin = new Padding(0, 2, 0, 0);
+            t.Controls.Add(_chart, 0, 2);
+
+            g.Controls.Add(t);
+            _root.Controls.Add(g, 0, 2);
+
+            _rangeBox.SelectedIndexChanged += delegate { ApplyPowerRange(); };
+            ApplyPowerRange();
+        }
+
         private void BuildPauseGroup()
         {
             GroupBox g = NewGroup("游戏时停 — 全局热键 Alt+`");
@@ -917,7 +1074,7 @@ namespace GenshinTweak
             t.Controls.Add(hint, 1, 1);
 
             g.Controls.Add(t);
-            _root.Controls.Add(g, 0, 2);
+            _root.Controls.Add(g, 0, 3);
         }
 
         // ====================================================================
@@ -1004,7 +1161,7 @@ namespace GenshinTweak
             _volTip.SetToolTip(_volDownKey, tip);
 
             g.Controls.Add(t);
-            _root.Controls.Add(g, 0, 3);
+            _root.Controls.Add(g, 0, 4);
 
             // wire the events only after the initial values are in place
             _volEnabled.CheckedChanged += delegate { if (!_volSyncing) ApplyVolumeSettings(true); };
@@ -1260,7 +1417,144 @@ namespace GenshinTweak
             // laid out; a layout pass can resize the group without re-docking the
             // child, which left the log box one line high. Force the child layout.
             g.Resize += delegate { g.PerformLayout(); };
-            _root.Controls.Add(g, 0, 4);
+            _root.Controls.Add(g, 0, 5);
+        }
+
+        // ====================================================================
+        // power chart: range / stats / export
+        // ====================================================================
+        private void ApplyPowerRange()
+        {
+            if (_chart == null || _rangeBox == null) return;
+            TimeSpan r;
+            switch (_rangeBox.SelectedIndex)
+            {
+                case 0: r = TimeSpan.FromMinutes(10); break;
+                case 2: r = TimeSpan.FromHours(6); break;
+                case 3: r = TimeSpan.FromHours(24); break;
+                default: r = TimeSpan.FromHours(1); break;
+            }
+            _chart.Range = r;
+            UpdatePowerStats();
+        }
+
+        private void PowerTimerTick(object sender, EventArgs e)
+        {
+            if (_chart == null || _chart.IsDisposed) return;
+            long v = PowerHistory.Version;
+            if (v == _powerVersion) return;
+            _powerVersion = v;
+            _chart.Invalidate();
+            UpdatePowerStats();
+        }
+
+        private void UpdatePowerStats()
+        {
+            if (_chart == null || _powerStats == null || _powerStats.IsDisposed) return;
+            DateTime from, to;
+            List<PowerSample> list = _chart.GetVisibleSamples(out from, out to);
+            if (list.Count == 0)
+            {
+                _powerStats.Text = "本时段无采样数据 — 休眠 / 程序未运行时不会记录";
+                return;
+            }
+
+            double gMax = -1, gSum = 0, gLast = -1;
+            int gCount = 0;
+            double cSum = 0;
+            int cCount = 0, gaps = 0;
+            PowerSample prev = null;
+            for (int i = 0; i < list.Count; i++)
+            {
+                PowerSample s = list[i];
+                if (s.GpuWatt >= 0)
+                {
+                    if (s.GpuWatt > gMax) gMax = s.GpuWatt;
+                    gSum += s.GpuWatt;
+                    gCount++;
+                    gLast = s.GpuWatt;
+                }
+                if (s.CpuPct >= 0)
+                {
+                    cSum += s.CpuPct;
+                    cCount++;
+                }
+                if (prev != null && !PowerHistory.IsContinuous(prev, s)) gaps++;
+                prev = s;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            if (gCount > 0)
+                sb.AppendFormat("GPU 峰值 {0:0}W · 均值 {1:0}W · 最新 {2:0}W", gMax, gSum / gCount, gLast);
+            else
+                sb.Append("GPU 无数据");
+            if (cCount > 0) sb.AppendFormat(" · CPU 均值 {0:0}%", cSum / cCount);
+            sb.AppendFormat(" · {0} 条采样", list.Count);
+            if (gaps > 0) sb.AppendFormat(" · 断开 {0} 处", gaps);
+            _powerStats.Text = sb.ToString();
+        }
+
+        private void ExportPowerCsv()
+        {
+            try
+            {
+                DateTime from, to;
+                List<PowerSample> list = _chart.GetVisibleSamples(out from, out to);
+                if (list.Count == 0)
+                {
+                    AppendLog("[WARN] 当前范围没有功耗采样，无法导出");
+                    return;
+                }
+
+                using (SaveFileDialog dlg = new SaveFileDialog())
+                {
+                    dlg.Title = "导出功耗曲线 CSV";
+                    dlg.Filter = "CSV 文件 (*.csv)|*.csv|所有文件 (*.*)|*.*";
+                    dlg.InitialDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                    dlg.FileName = string.Format("genshin-power-{0:yyyyMMdd-HHmmss}.csv", DateTime.Now);
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                    StringBuilder sb = new StringBuilder();
+                    sb.Append("time,gpu_power_w,gpu_clock_mhz,gpu_temp_c,gpu_util_pct,cpu_pct,gap_before\r\n");
+                    bool firstRow = true;
+                    foreach (PowerSample s in list)
+                    {
+                        // a blank line before a post-hole row makes Excel / most
+                        // chart tools break the line there instead of connecting
+                        // the two sides of a sleep across the missing time
+                        if (!firstRow && s.GapBefore) sb.Append("\r\n");
+                        firstRow = false;
+                        sb.Append(s.Time.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+                        sb.Append(',');
+                        AppendCsvNum(sb, s.GpuWatt, "0.0");
+                        sb.Append(',');
+                        if (s.GpuClockMhz >= 0) sb.Append(s.GpuClockMhz.ToString(CultureInfo.InvariantCulture));
+                        sb.Append(',');
+                        if (s.GpuTempC >= 0) sb.Append(s.GpuTempC.ToString(CultureInfo.InvariantCulture));
+                        sb.Append(',');
+                        AppendCsvNum(sb, s.GpuUtilPct, "0");
+                        sb.Append(',');
+                        AppendCsvNum(sb, s.CpuPct, "0.0");
+                        sb.Append(',');
+                        sb.Append(s.GapBefore ? "1" : "0");
+                        sb.Append("\r\n");
+                    }
+
+                    File.WriteAllText(dlg.FileName, sb.ToString(), new UTF8Encoding(true));
+                    AppendLog(string.Format("[OK] 已导出 {0} 条功耗采样（{1:HH:mm} - {2:HH:mm}）→ {3}",
+                        list.Count, from, to, dlg.FileName));
+                    PowerControl.LogEvent("export", "power csv rows=" + list.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendLog("[ERR] 导出功耗 CSV 失败: " + ex.Message);
+            }
+        }
+
+        private static void AppendCsvNum(StringBuilder sb, double v, string fmt)
+        {
+            if (v >= 0) sb.Append(v.ToString(fmt, CultureInfo.InvariantCulture));
         }
 
         private TrackBar AddSlider(TableLayoutPanel parent, int row, string caption,
@@ -1684,6 +1978,12 @@ namespace GenshinTweak
             catch { }
             try
             {
+                if (_powerTimer != null) _powerTimer.Stop();
+                PowerHistory.Stop();
+            }
+            catch { }
+            try
+            {
                 VolumeKeys.Uninstall();
                 VolumeHud.Close();
                 if (_volTimer != null) _volTimer.Stop();
@@ -1763,6 +2063,8 @@ namespace GenshinTweak
                 }
                 try { VolumeKeys.Uninstall(); } catch { }
                 try { VolumeHud.Close(); } catch { }
+                try { PowerHistory.Stop(); } catch { }
+                if (_powerTimer != null) { try { _powerTimer.Dispose(); } catch { } }
                 if (_volTimer != null) { try { _volTimer.Dispose(); } catch { } }
                 if (_volCaptureTimeout != null) { try { _volCaptureTimeout.Dispose(); } catch { } }
                 if (_volTip != null) { try { _volTip.Dispose(); } catch { } }
