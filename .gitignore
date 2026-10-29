@@ -14,3 +14,10 @@ genshin-tweak.exe
 # analysis scratch
 analysis/.chrome/
 analysis/*.html
+
+# analysis/full artifacts
+analysis/full/out/data/
+analysis/full/out/.chrome/
+analysis/full/out/charts/*.html
+analysis/full/out/charts/*.svg
+!analysis/full/out/tables/*.csv
