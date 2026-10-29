@@ -10,3 +10,7 @@ window_state.json
 # build artifacts
 genshin-tweak.exe
 *.pdb
+
+# analysis scratch
+analysis/.chrome/
+analysis/*.html

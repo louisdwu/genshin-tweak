@@ -1,0 +1,493 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="800" viewBox="0 0 1240 800">
+<rect width="1240" height="800" fill="#ffffff"/>
+<text x="26.0" y="36.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="21" font-weight="600" fill="#1f2430" text-anchor="start">GPU 功耗面：横轴频率、纵轴利用率、颜色＝该格平均功耗</text>
+<text x="26.0" y="60.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.8" font-weight="400" fill="#6b7280" text-anchor="start">每格是该频率×利用率区间的平均瓦数（n≥15 才标数字）；颜色只跟功耗走，所以“同色横条”＝这些工况一样费电</text>
+<rect x="130.0" y="661.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="633.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="604.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="576.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="547.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="519.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="490.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="462.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="433.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="405.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="348.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130.0" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="661.5" width="43.1" height="27.5" fill="#e0ecfc"/>
+<text x="196.2" y="679.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">25</text>
+<rect x="174.1" y="633.0" width="43.1" height="27.5" fill="#deecfc"/>
+<text x="196.2" y="651.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">26</text>
+<rect x="174.1" y="604.5" width="43.1" height="27.5" fill="#dcebfc"/>
+<text x="196.2" y="622.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">27</text>
+<rect x="174.1" y="576.0" width="43.1" height="27.5" fill="#dbeafb"/>
+<text x="196.2" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">28</text>
+<rect x="174.1" y="547.5" width="43.1" height="27.5" fill="#daeafb"/>
+<text x="196.2" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">28</text>
+<rect x="174.1" y="519.0" width="43.1" height="27.5" fill="#d8e9fb"/>
+<text x="196.2" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">29</text>
+<rect x="174.1" y="490.5" width="43.1" height="27.5" fill="#d7e9fb"/>
+<text x="196.2" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">30</text>
+<rect x="174.1" y="462.0" width="43.1" height="27.5" fill="#d5e8fa"/>
+<rect x="174.1" y="433.5" width="43.1" height="27.5" fill="#d0e6f9"/>
+<rect x="174.1" y="405.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="348.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="174.1" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="661.5" width="43.1" height="27.5" fill="#cbe3f8"/>
+<text x="240.3" y="679.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">38</text>
+<rect x="218.2" y="633.0" width="43.1" height="27.5" fill="#d3e7fa"/>
+<text x="240.3" y="651.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">33</text>
+<rect x="218.2" y="604.5" width="43.1" height="27.5" fill="#d7e9fa"/>
+<text x="240.3" y="622.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">30</text>
+<rect x="218.2" y="576.0" width="43.1" height="27.5" fill="#d5e8fa"/>
+<text x="240.3" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">31</text>
+<rect x="218.2" y="547.5" width="43.1" height="27.5" fill="#d4e7fa"/>
+<text x="240.3" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">32</text>
+<rect x="218.2" y="519.0" width="43.1" height="27.5" fill="#d1e6f9"/>
+<text x="240.3" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">34</text>
+<rect x="218.2" y="490.5" width="43.1" height="27.5" fill="#d2e6f9"/>
+<text x="240.3" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">33</text>
+<rect x="218.2" y="462.0" width="43.1" height="27.5" fill="#d0e6f9"/>
+<rect x="218.2" y="433.5" width="43.1" height="27.5" fill="#c6e1f7"/>
+<rect x="218.2" y="405.0" width="43.1" height="27.5" fill="#c9e3f8"/>
+<rect x="218.2" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="348.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="218.2" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="661.5" width="43.1" height="27.5" fill="#cfe5f9"/>
+<rect x="262.4" y="633.0" width="43.1" height="27.5" fill="#c6e1f7"/>
+<text x="284.4" y="651.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">40</text>
+<rect x="262.4" y="604.5" width="43.1" height="27.5" fill="#c1dff6"/>
+<text x="284.4" y="622.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">43</text>
+<rect x="262.4" y="576.0" width="43.1" height="27.5" fill="#c5e1f7"/>
+<text x="284.4" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">41</text>
+<rect x="262.4" y="547.5" width="43.1" height="27.5" fill="#c4e1f7"/>
+<text x="284.4" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">41</text>
+<rect x="262.4" y="519.0" width="43.1" height="27.5" fill="#c7e2f7"/>
+<text x="284.4" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">40</text>
+<rect x="262.4" y="490.5" width="43.1" height="27.5" fill="#cbe3f8"/>
+<text x="284.4" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">37</text>
+<rect x="262.4" y="462.0" width="43.1" height="27.5" fill="#cce4f8"/>
+<text x="284.4" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">37</text>
+<rect x="262.4" y="433.5" width="43.1" height="27.5" fill="#c7e1f7"/>
+<rect x="262.4" y="405.0" width="43.1" height="27.5" fill="#bedef5"/>
+<rect x="262.4" y="376.5" width="43.1" height="27.5" fill="#c5e1f7"/>
+<rect x="262.4" y="348.0" width="43.1" height="27.5" fill="#bfdef6"/>
+<rect x="262.4" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="262.4" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="306.5" y="661.5" width="43.1" height="27.5" fill="#cde4f8"/>
+<rect x="306.5" y="633.0" width="43.1" height="27.5" fill="#b4d9f3"/>
+<rect x="306.5" y="604.5" width="43.1" height="27.5" fill="#badcf5"/>
+<text x="328.5" y="622.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">47</text>
+<rect x="306.5" y="576.0" width="43.1" height="27.5" fill="#b6daf4"/>
+<text x="328.5" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">50</text>
+<rect x="306.5" y="547.5" width="43.1" height="27.5" fill="#b3d9f3"/>
+<text x="328.5" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">52</text>
+<rect x="306.5" y="519.0" width="43.1" height="27.5" fill="#bcddf5"/>
+<text x="328.5" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">46</text>
+<rect x="306.5" y="490.5" width="43.1" height="27.5" fill="#c3e0f6"/>
+<text x="328.5" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">42</text>
+<rect x="306.5" y="462.0" width="43.1" height="27.5" fill="#c5e1f7"/>
+<text x="328.5" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">41</text>
+<rect x="306.5" y="433.5" width="43.1" height="27.5" fill="#c7e2f7"/>
+<rect x="306.5" y="405.0" width="43.1" height="27.5" fill="#c3e0f6"/>
+<rect x="306.5" y="376.5" width="43.1" height="27.5" fill="#c1dff6"/>
+<text x="328.5" y="394.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">43</text>
+<rect x="306.5" y="348.0" width="43.1" height="27.5" fill="#c1dff6"/>
+<text x="328.5" y="366.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">43</text>
+<rect x="306.5" y="319.5" width="43.1" height="27.5" fill="#badcf5"/>
+<rect x="306.5" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="306.5" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="306.5" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="306.5" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="306.5" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="306.5" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="306.5" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="661.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="633.0" width="43.1" height="27.5" fill="#c8e2f7"/>
+<rect x="350.6" y="604.5" width="43.1" height="27.5" fill="#bdddf5"/>
+<text x="372.6" y="622.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">46</text>
+<rect x="350.6" y="576.0" width="43.1" height="27.5" fill="#b5daf4"/>
+<text x="372.6" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">50</text>
+<rect x="350.6" y="547.5" width="43.1" height="27.5" fill="#b2d9f3"/>
+<text x="372.6" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">52</text>
+<rect x="350.6" y="519.0" width="43.1" height="27.5" fill="#bcddf5"/>
+<text x="372.6" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">47</text>
+<rect x="350.6" y="490.5" width="43.1" height="27.5" fill="#c0def6"/>
+<text x="372.6" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">44</text>
+<rect x="350.6" y="462.0" width="43.1" height="27.5" fill="#c0dff6"/>
+<text x="372.6" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">44</text>
+<rect x="350.6" y="433.5" width="43.1" height="27.5" fill="#c6e1f7"/>
+<text x="372.6" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">41</text>
+<rect x="350.6" y="405.0" width="43.1" height="27.5" fill="#c5e1f7"/>
+<rect x="350.6" y="376.5" width="43.1" height="27.5" fill="#c1dff6"/>
+<text x="372.6" y="394.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">44</text>
+<rect x="350.6" y="348.0" width="43.1" height="27.5" fill="#c0def6"/>
+<text x="372.6" y="366.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">44</text>
+<rect x="350.6" y="319.5" width="43.1" height="27.5" fill="#bcddf5"/>
+<rect x="350.6" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="350.6" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="661.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="633.0" width="43.1" height="27.5" fill="#cbe3f8"/>
+<rect x="394.7" y="604.5" width="43.1" height="27.5" fill="#b9dcf4"/>
+<rect x="394.7" y="576.0" width="43.1" height="27.5" fill="#b7dbf4"/>
+<text x="416.8" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">49</text>
+<rect x="394.7" y="547.5" width="43.1" height="27.5" fill="#b4daf3"/>
+<text x="416.8" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">51</text>
+<rect x="394.7" y="519.0" width="43.1" height="27.5" fill="#b9dcf4"/>
+<text x="416.8" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">48</text>
+<rect x="394.7" y="490.5" width="43.1" height="27.5" fill="#bbdcf5"/>
+<text x="416.8" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">47</text>
+<rect x="394.7" y="462.0" width="43.1" height="27.5" fill="#bfdef6"/>
+<text x="416.8" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">45</text>
+<rect x="394.7" y="433.5" width="43.1" height="27.5" fill="#c5e1f7"/>
+<text x="416.8" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">41</text>
+<rect x="394.7" y="405.0" width="43.1" height="27.5" fill="#c1dff6"/>
+<rect x="394.7" y="376.5" width="43.1" height="27.5" fill="#bfdef6"/>
+<text x="416.8" y="394.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">44</text>
+<rect x="394.7" y="348.0" width="43.1" height="27.5" fill="#bedef5"/>
+<text x="416.8" y="366.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">45</text>
+<rect x="394.7" y="319.5" width="43.1" height="27.5" fill="#bdddf5"/>
+<rect x="394.7" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="394.7" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="661.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="633.0" width="43.1" height="27.5" fill="#cbe3f8"/>
+<rect x="438.8" y="604.5" width="43.1" height="27.5" fill="#b9dcf4"/>
+<rect x="438.8" y="576.0" width="43.1" height="27.5" fill="#b9dbf4"/>
+<text x="460.9" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">48</text>
+<rect x="438.8" y="547.5" width="43.1" height="27.5" fill="#b6daf4"/>
+<text x="460.9" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">50</text>
+<rect x="438.8" y="519.0" width="43.1" height="27.5" fill="#b9dbf4"/>
+<text x="460.9" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">48</text>
+<rect x="438.8" y="490.5" width="43.1" height="27.5" fill="#b3d9f3"/>
+<text x="460.9" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">52</text>
+<rect x="438.8" y="462.0" width="43.1" height="27.5" fill="#b6daf4"/>
+<text x="460.9" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">50</text>
+<rect x="438.8" y="433.5" width="43.1" height="27.5" fill="#c3e0f6"/>
+<text x="460.9" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">42</text>
+<rect x="438.8" y="405.0" width="43.1" height="27.5" fill="#bbdcf5"/>
+<rect x="438.8" y="376.5" width="43.1" height="27.5" fill="#bfdef5"/>
+<text x="460.9" y="394.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">45</text>
+<rect x="438.8" y="348.0" width="43.1" height="27.5" fill="#bedef5"/>
+<text x="460.9" y="366.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">45</text>
+<rect x="438.8" y="319.5" width="43.1" height="27.5" fill="#bbddf5"/>
+<rect x="438.8" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="438.8" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="661.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="633.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="604.5" width="43.1" height="27.5" fill="#96cded"/>
+<rect x="482.9" y="576.0" width="43.1" height="27.5" fill="#9ed0ef"/>
+<text x="505.0" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">64</text>
+<rect x="482.9" y="547.5" width="43.1" height="27.5" fill="#9dcfef"/>
+<text x="505.0" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">65</text>
+<rect x="482.9" y="519.0" width="43.1" height="27.5" fill="#9dd0ef"/>
+<text x="505.0" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">65</text>
+<rect x="482.9" y="490.5" width="43.1" height="27.5" fill="#9bcfee"/>
+<text x="505.0" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">66</text>
+<rect x="482.9" y="462.0" width="43.1" height="27.5" fill="#9bcfee"/>
+<text x="505.0" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">66</text>
+<rect x="482.9" y="433.5" width="43.1" height="27.5" fill="#aad5f1"/>
+<text x="505.0" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">57</text>
+<rect x="482.9" y="405.0" width="43.1" height="27.5" fill="#a2d2f0"/>
+<rect x="482.9" y="376.5" width="43.1" height="27.5" fill="#b4d9f3"/>
+<rect x="482.9" y="348.0" width="43.1" height="27.5" fill="#b0d8f3"/>
+<rect x="482.9" y="319.5" width="43.1" height="27.5" fill="#b0d8f2"/>
+<rect x="482.9" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="482.9" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="527.1" y="661.5" width="43.1" height="27.5" fill="#72c2a8"/>
+<rect x="527.1" y="633.0" width="43.1" height="27.5" fill="#9bceee"/>
+<rect x="527.1" y="604.5" width="43.1" height="27.5" fill="#9bcfee"/>
+<rect x="527.1" y="576.0" width="43.1" height="27.5" fill="#9aceee"/>
+<text x="549.1" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">67</text>
+<rect x="527.1" y="547.5" width="43.1" height="27.5" fill="#99ceee"/>
+<text x="549.1" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">67</text>
+<rect x="527.1" y="519.0" width="43.1" height="27.5" fill="#99ceee"/>
+<text x="549.1" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">67</text>
+<rect x="527.1" y="490.5" width="43.1" height="27.5" fill="#95cced"/>
+<text x="549.1" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">70</text>
+<rect x="527.1" y="462.0" width="43.1" height="27.5" fill="#8fc9ec"/>
+<text x="549.1" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">73</text>
+<rect x="527.1" y="433.5" width="43.1" height="27.5" fill="#9ccfee"/>
+<text x="549.1" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">65</text>
+<rect x="527.1" y="405.0" width="43.1" height="27.5" fill="#9aceee"/>
+<rect x="527.1" y="376.5" width="43.1" height="27.5" fill="#95cced"/>
+<rect x="527.1" y="348.0" width="43.1" height="27.5" fill="#95cced"/>
+<rect x="527.1" y="319.5" width="43.1" height="27.5" fill="#96cced"/>
+<rect x="527.1" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="527.1" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="527.1" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="527.1" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="527.1" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="527.1" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="527.1" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="571.2" y="661.5" width="43.1" height="27.5" fill="#9aceee"/>
+<rect x="571.2" y="633.0" width="43.1" height="27.5" fill="#9dcfef"/>
+<rect x="571.2" y="604.5" width="43.1" height="27.5" fill="#84c6d6"/>
+<rect x="571.2" y="576.0" width="43.1" height="27.5" fill="#97cded"/>
+<text x="593.2" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">69</text>
+<rect x="571.2" y="547.5" width="43.1" height="27.5" fill="#97cded"/>
+<text x="593.2" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">69</text>
+<rect x="571.2" y="519.0" width="43.1" height="27.5" fill="#93cbec"/>
+<text x="593.2" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">71</text>
+<rect x="571.2" y="490.5" width="43.1" height="27.5" fill="#8fc9ec"/>
+<text x="593.2" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">73</text>
+<rect x="571.2" y="462.0" width="43.1" height="27.5" fill="#8cc8ea"/>
+<text x="593.2" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">75</text>
+<rect x="571.2" y="433.5" width="43.1" height="27.5" fill="#93cbec"/>
+<text x="593.2" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">71</text>
+<rect x="571.2" y="405.0" width="43.1" height="27.5" fill="#97cded"/>
+<rect x="571.2" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="571.2" y="348.0" width="43.1" height="27.5" fill="#66bf89"/>
+<rect x="571.2" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="571.2" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="571.2" y="262.5" width="43.1" height="27.5" fill="#68c08e"/>
+<rect x="571.2" y="234.0" width="43.1" height="27.5" fill="#67c08c"/>
+<rect x="571.2" y="205.5" width="43.1" height="27.5" fill="#65bf86"/>
+<rect x="571.2" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="571.2" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="571.2" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="615.3" y="661.5" width="43.1" height="27.5" fill="#98cded"/>
+<text x="637.4" y="679.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">68</text>
+<rect x="615.3" y="633.0" width="43.1" height="27.5" fill="#99ceee"/>
+<text x="637.4" y="651.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">67</text>
+<rect x="615.3" y="604.5" width="43.1" height="27.5" fill="#96cced"/>
+<text x="637.4" y="622.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">69</text>
+<rect x="615.3" y="576.0" width="43.1" height="27.5" fill="#92cbec"/>
+<text x="637.4" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">71</text>
+<rect x="615.3" y="547.5" width="43.1" height="27.5" fill="#92cbec"/>
+<text x="637.4" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">71</text>
+<rect x="615.3" y="519.0" width="43.1" height="27.5" fill="#90caec"/>
+<text x="637.4" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">73</text>
+<rect x="615.3" y="490.5" width="43.1" height="27.5" fill="#8bc8e7"/>
+<text x="637.4" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">77</text>
+<rect x="615.3" y="462.0" width="43.1" height="27.5" fill="#8ac8e6"/>
+<text x="637.4" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">77</text>
+<rect x="615.3" y="433.5" width="43.1" height="27.5" fill="#93cbec"/>
+<text x="637.4" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">71</text>
+<rect x="615.3" y="405.0" width="43.1" height="27.5" fill="#91caec"/>
+<rect x="615.3" y="376.5" width="43.1" height="27.5" fill="#93cbec"/>
+<rect x="615.3" y="348.0" width="43.1" height="27.5" fill="#98cded"/>
+<rect x="615.3" y="319.5" width="43.1" height="27.5" fill="#8cc8eb"/>
+<rect x="615.3" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="615.3" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="615.3" y="234.0" width="43.1" height="27.5" fill="#8ec168"/>
+<rect x="615.3" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="615.3" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="615.3" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="615.3" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="661.5" width="43.1" height="27.5" fill="#92caec"/>
+<rect x="659.4" y="633.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="604.5" width="43.1" height="27.5" fill="#8bc8e8"/>
+<rect x="659.4" y="576.0" width="43.1" height="27.5" fill="#8cc8eb"/>
+<rect x="659.4" y="547.5" width="43.1" height="27.5" fill="#8dc8eb"/>
+<rect x="659.4" y="519.0" width="43.1" height="27.5" fill="#89c7e3"/>
+<rect x="659.4" y="490.5" width="43.1" height="27.5" fill="#86c7dd"/>
+<text x="681.5" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">82</text>
+<rect x="659.4" y="462.0" width="43.1" height="27.5" fill="#80c5cd"/>
+<text x="681.5" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">89</text>
+<rect x="659.4" y="433.5" width="43.1" height="27.5" fill="#89c7e4"/>
+<text x="681.5" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">78</text>
+<rect x="659.4" y="405.0" width="43.1" height="27.5" fill="#86c7db"/>
+<rect x="659.4" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="348.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="659.4" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="661.5" width="43.1" height="27.5" fill="#8cc8eb"/>
+<rect x="703.5" y="633.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="604.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="576.0" width="43.1" height="27.5" fill="#89c7e3"/>
+<rect x="703.5" y="547.5" width="43.1" height="27.5" fill="#88c7e1"/>
+<rect x="703.5" y="519.0" width="43.1" height="27.5" fill="#87c7de"/>
+<rect x="703.5" y="490.5" width="43.1" height="27.5" fill="#7ec5c8"/>
+<text x="725.6" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">92</text>
+<rect x="703.5" y="462.0" width="43.1" height="27.5" fill="#7fc5cb"/>
+<text x="725.6" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">90</text>
+<rect x="703.5" y="433.5" width="43.1" height="27.5" fill="#84c6d8"/>
+<rect x="703.5" y="405.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="348.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="291.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="262.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="703.5" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="661.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="633.0" width="43.1" height="27.5" fill="#5fbe79"/>
+<rect x="747.6" y="604.5" width="43.1" height="27.5" fill="#84c6d6"/>
+<rect x="747.6" y="576.0" width="43.1" height="27.5" fill="#82c6d0"/>
+<rect x="747.6" y="547.5" width="43.1" height="27.5" fill="#83c6d5"/>
+<rect x="747.6" y="519.0" width="43.1" height="27.5" fill="#86c7db"/>
+<rect x="747.6" y="490.5" width="43.1" height="27.5" fill="#72c2a8"/>
+<rect x="747.6" y="462.0" width="43.1" height="27.5" fill="#75c3b1"/>
+<rect x="747.6" y="433.5" width="43.1" height="27.5" fill="#7cc4c1"/>
+<rect x="747.6" y="405.0" width="43.1" height="27.5" fill="#87c7de"/>
+<rect x="747.6" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="348.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="291.0" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="747.6" y="262.5" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="747.6" y="234.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="205.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="177.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="747.6" y="148.5" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="747.6" y="120.0" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="661.5" width="43.1" height="27.5" fill="#88c16a"/>
+<rect x="791.8" y="633.0" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="604.5" width="43.1" height="27.5" fill="#b9c45a"/>
+<rect x="791.8" y="576.0" width="43.1" height="27.5" fill="#73c2ab"/>
+<rect x="791.8" y="547.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="791.8" y="519.0" width="43.1" height="27.5" fill="#70c2a4"/>
+<rect x="791.8" y="490.5" width="43.1" height="27.5" fill="#a7c360"/>
+<rect x="791.8" y="462.0" width="43.1" height="27.5" fill="#6fc2a1"/>
+<rect x="791.8" y="433.5" width="43.1" height="27.5" fill="#6cc19a"/>
+<rect x="791.8" y="405.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="791.8" y="376.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="791.8" y="348.0" width="43.1" height="27.5" fill="#d73d32"/>
+<rect x="791.8" y="319.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="791.8" y="291.0" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="262.5" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="234.0" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="205.5" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="177.0" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="148.5" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="791.8" y="120.0" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="835.9" y="661.5" width="43.1" height="27.5" fill="#6dc19c"/>
+<text x="857.9" y="679.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">113</text>
+<rect x="835.9" y="633.0" width="43.1" height="27.5" fill="#6cc198"/>
+<text x="857.9" y="651.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">115</text>
+<rect x="835.9" y="604.5" width="43.1" height="27.5" fill="#68c090"/>
+<text x="857.9" y="622.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">119</text>
+<rect x="835.9" y="576.0" width="43.1" height="27.5" fill="#66c089"/>
+<text x="857.9" y="594.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">122</text>
+<rect x="835.9" y="547.5" width="43.1" height="27.5" fill="#63bf83"/>
+<text x="857.9" y="565.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">125</text>
+<rect x="835.9" y="519.0" width="43.1" height="27.5" fill="#7ec06e"/>
+<text x="857.9" y="537.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">140</text>
+<rect x="835.9" y="490.5" width="43.1" height="27.5" fill="#88c16a"/>
+<text x="857.9" y="508.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">143</text>
+<rect x="835.9" y="462.0" width="43.1" height="27.5" fill="#94c266"/>
+<text x="857.9" y="480.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#232a36" text-anchor="middle">147</text>
+<rect x="835.9" y="433.5" width="43.1" height="27.5" fill="#e0c74d"/>
+<text x="857.9" y="451.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">172</text>
+<rect x="835.9" y="405.0" width="43.1" height="27.5" fill="#efab42"/>
+<text x="857.9" y="423.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">191</text>
+<rect x="835.9" y="376.5" width="43.1" height="27.5" fill="#f0af42"/>
+<text x="857.9" y="394.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">189</text>
+<rect x="835.9" y="348.0" width="43.1" height="27.5" fill="#e98f3e"/>
+<text x="857.9" y="366.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">204</text>
+<rect x="835.9" y="319.5" width="43.1" height="27.5" fill="#e7863d"/>
+<text x="857.9" y="337.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">207</text>
+<rect x="835.9" y="291.0" width="43.1" height="27.5" fill="#e7853c"/>
+<text x="857.9" y="309.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">208</text>
+<rect x="835.9" y="262.5" width="43.1" height="27.5" fill="#dc5536"/>
+<text x="857.9" y="280.8" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">229</text>
+<rect x="835.9" y="234.0" width="43.1" height="27.5" fill="#e88c3d"/>
+<text x="857.9" y="252.2" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="500" fill="#ffffff" text-anchor="middle">205</text>
+<rect x="835.9" y="205.5" width="43.1" height="27.5" fill="#d73c32"/>
+<rect x="835.9" y="177.0" width="43.1" height="27.5" fill="#e57e3b"/>
+<rect x="835.9" y="148.5" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="835.9" y="120.0" width="43.1" height="27.5" fill="#f6f7f9"/>
+<rect x="130" y="120" width="750" height="570" fill="none" stroke="#dfe3ea"/>
+<text x="130.0" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">200</text>
+<text x="174.1" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">300</text>
+<text x="218.2" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">400</text>
+<text x="262.4" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">500</text>
+<text x="306.5" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">600</text>
+<text x="350.6" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">700</text>
+<text x="394.7" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">800</text>
+<text x="438.8" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">900</text>
+<text x="482.9" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1000</text>
+<text x="527.1" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1100</text>
+<text x="571.2" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1200</text>
+<text x="615.3" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1300</text>
+<text x="659.4" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1400</text>
+<text x="703.5" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1500</text>
+<text x="747.6" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1600</text>
+<text x="791.8" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1700</text>
+<text x="835.9" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1800</text>
+<text x="880.0" y="708.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="10.5" font-weight="400" fill="#9aa1ae" text-anchor="middle">1900</text>
+<text x="120.0" y="694.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#9aa1ae" text-anchor="end">0</text>
+<text x="120.0" y="580.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#9aa1ae" text-anchor="end">20</text>
+<text x="120.0" y="466.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#9aa1ae" text-anchor="end">40</text>
+<text x="120.0" y="352.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#9aa1ae" text-anchor="end">60</text>
+<text x="120.0" y="238.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#9aa1ae" text-anchor="end">80</text>
+<text x="120.0" y="124.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#9aa1ae" text-anchor="end">100</text>
+<text x="505.0" y="734.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="13" font-weight="600" fill="#374151" text-anchor="middle">GPU 核心频率 clocks.sm (MHz)</text>
+<text x="46" y="405.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="13" font-weight="600" fill="#374151" transform="rotate(-90 46 405.0)" text-anchor="middle">GPU 3D 利用率 utilization.gpu (%)</text>
+<text x="930.0" y="124.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">三列横着读</text>
+<text x="930.0" y="149.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#2f7d46" text-anchor="start">900 MHz　util 20%→60%　　41 → 45 W</text>
+<text x="930.0" y="174.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#2f7d46" text-anchor="start">1300 MHz　util 0→65%　　　 68 → 72 W</text>
+<text x="930.0" y="199.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#b0392b" text-anchor="start">1830 MHz　util 5→60%　　 114 → 205 W</text>
+<text x="930.0" y="237.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#4a5160" text-anchor="start">低频段 util 基本不要钱，只有顶格</text>
+<text x="930.0" y="262.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#4a5160" text-anchor="start">频率才“活越多越贵”。11:34 之后那</text>
+<text x="930.0" y="287.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#4a5160" text-anchor="start">段工况在 886 MHz，正好落在免费的那</text>
+<text x="930.0" y="312.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#4a5160" text-anchor="start">几条横带上 —— 这就是“加了活却没</text>
+<text x="930.0" y="337.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#4a5160" text-anchor="start">加功耗”的全部原因。</text>
+<text x="930.0" y="375.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="600" fill="#b0392b" text-anchor="start">最刺眼的是 1830 MHz 那一列：</text>
+<text x="930.0" y="400.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#b0392b" text-anchor="start">util 10% 也要 114–121 W，比 400 MHz</text>
+<text x="930.0" y="425.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#b0392b" text-anchor="start">待机的 26 W 多出近 90 W，而这 90 W</text>
+<text x="930.0" y="450.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#b0392b" text-anchor="start">几乎没换来任何活。09:25–10:55 就</text>
+<text x="930.0" y="475.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="12.2" font-weight="400" fill="#b0392b" text-anchor="start">停在这一格：1.5 小时 ≈ 112 Wh。</text>
+<text x="930.0" y="513.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11.8" font-weight="400" fill="#6b7280" text-anchor="start">还能看到 util 越高功耗略低（45→41），</text>
+<text x="930.0" y="538.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11.8" font-weight="400" fill="#6b7280" text-anchor="start">因为有活干时驱动才肯降频降压。</text>
+<text x="930.0" y="563.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11.8" font-weight="400" fill="#6b7280" text-anchor="start">所以 utilization.gpu 不能当</text>
+<text x="930.0" y="588.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11.8" font-weight="400" fill="#6b7280" text-anchor="start">“工作量/能耗”的代理指标。</text>
+<text x="26.0" y="784.0" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="11" font-weight="400" fill="#a6adba" text-anchor="start">数据源：full-snapshot.csv 全量 17691 行，按 100 MHz × 5% 分格；空格＝该组合没出现过</text>
+</svg>
